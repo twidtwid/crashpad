@@ -14,6 +14,7 @@ const EVENT_KEYS = [
 
 const els = {
   grid: document.querySelector("#statsGrid"),
+  charts: document.querySelector("#statsCharts"),
   status: document.querySelector("#statsStatus"),
 };
 
@@ -48,9 +49,84 @@ function renderStats(stats) {
   ));
 
   els.grid.innerHTML = cards.join("");
+  renderCharts(totals);
   els.status.textContent = stats?.updatedAt
     ? t("stats.lastUpdated", { timestamp: formatDate(stats.updatedAt) })
     : t("stats.notRecorded");
+}
+
+function renderCharts(totals) {
+  const localActions = numberValue(totals.summary_copied) + numberValue(totals.json_export) + numberValue(totals.print_opened);
+  const charts = [
+    {
+      title: t("stats.charts.activityMix.title"),
+      description: t("stats.charts.activityMix.description"),
+      bars: [
+        chartBar(t("stats.events.page_view"), totals.page_view, "accent"),
+        chartBar(t("stats.events.report_analyzed"), totals.report_analyzed, "success"),
+        chartBar(t("stats.events.parse_error"), totals.parse_error, "danger"),
+        chartBar(t("stats.localActions"), localActions, "warn"),
+      ],
+    },
+    {
+      title: t("stats.charts.analysisOutcome.title"),
+      description: t("stats.charts.analysisOutcome.description"),
+      bars: [
+        chartBar(t("stats.events.report_analyzed"), totals.report_analyzed, "success"),
+        chartBar(t("stats.events.parse_error"), totals.parse_error, "danger"),
+      ],
+    },
+    {
+      title: t("stats.charts.sourceMix.title"),
+      description: t("stats.charts.sourceMix.description"),
+      bars: [
+        chartBar(t("stats.events.browser_report_analyzed"), totals.browser_report_analyzed, "success"),
+        chartBar(t("stats.events.sample_report_analyzed"), totals.sample_report_analyzed, "accent"),
+      ],
+    },
+  ];
+
+  els.charts.innerHTML = charts.map(renderChart).join("");
+}
+
+function renderChart(chart) {
+  const max = Math.max(1, ...chart.bars.map((bar) => bar.value));
+  const ariaLabel = chart.bars.map((bar) => `${bar.label}: ${formatNumber(bar.value)}`).join(", ");
+
+  return `
+    <article class="stats-chart-card">
+      <div class="stats-chart-head">
+        <h3>${escapeHtml(chart.title)}</h3>
+        <p>${escapeHtml(chart.description)}</p>
+      </div>
+      <div class="bar-chart" role="img" aria-label="${escapeAttr(ariaLabel)}">
+        ${chart.bars.map((bar) => renderBar(bar, max)).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function chartBar(label, value, tone) {
+  return {
+    label,
+    value: numberValue(value),
+    tone,
+  };
+}
+
+function renderBar(bar, max) {
+  const width = max ? Math.max(2, Math.round((bar.value / max) * 100)) : 2;
+  return `
+    <div class="bar-row">
+      <div class="bar-row-meta">
+        <span>${escapeHtml(bar.label)}</span>
+        <strong>${escapeHtml(formatNumber(bar.value))}</strong>
+      </div>
+      <div class="bar-track" aria-hidden="true">
+        <span class="bar-fill ${escapeAttr(bar.tone)}" style="width: ${width}%"></span>
+      </div>
+    </div>
+  `;
 }
 
 function statCard(eventName, label, value, description) {

@@ -33,6 +33,9 @@ test("privacy copy distinguishes local file input from server upload routes and 
   assert.match(messages, /has no route that receives crash report files/);
   assert.match(`${privacy}\n${messages}`, /non-identifiable aggregate stats/);
   assert.match(`${privacy}\n${messages}`, /does not store IP addresses, user agents, file names, report contents, stack traces, or identifiers/);
+  assert.match(privacy, /data-i18n-html="privacy\.localRunHtml"/);
+  assert.match(privacy, /href="https:\/\/github\.com\/twidtwid\/crashreporter"[^>]*target="_blank"/);
+  assert.match(messages, /run this completely locally/);
   assert.match(stats, /data-i18n="stats.title"/);
   assert.match(readme, /they are not network uploads/);
   assert.doesNotMatch(`${privacy}\n${messages}\n${readme}`, /upload endpoint|uploaded reports|upload control/i);
@@ -74,9 +77,14 @@ test("stats page exposes public aggregate analytics", async () => {
   ]);
 
   assert.match(statsHtml, /id="statsGrid"/);
+  assert.match(statsHtml, /id="statsCharts"/);
   assert.match(statsHtml, /aria-live="polite"/);
   assert.match(statsHtml, /type="module" src="\/src\/stats.js"/);
   assert.match(statsJs, /fetch\("\/api\/stats"\)/);
+  assert.match(statsJs, /renderCharts/);
+  assert.match(statsJs, /class="stats-chart-card"/);
+  assert.match(statsJs, /class="bar-chart"/);
+  assert.match(statsJs, /role="img"/);
   assert.match(statsJs, /class="stat-card-head"/);
   assert.match(statsJs, /class="stat-card-icon"/);
   assert.match(statsJs, /data-event="\$\{escapeAttr\(eventName\)\}"/);

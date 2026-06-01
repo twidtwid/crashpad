@@ -77,6 +77,7 @@ export const messages = {
     title: "Privacy Policy",
     pageTitle: "Privacy Policy - CrashPad",
     intro: "CrashPad is designed to analyze Apple crash reports in your browser. Reports you choose or drop are read locally in the current tab, not posted to this server, and are not stored by the application.",
+    localRunHtml: "Check out the <a class=\"external-link\" href=\"https://github.com/twidtwid/crashreporter\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub project</a> if you would like to run this completely locally.",
     processingTitle: "What The App Processes",
     processingBody: "When you choose or drop a crash report, the file is read by browser JavaScript in the current tab so the report can be parsed and rendered. The file picker and drop target are local browser inputs, not a network upload. The app keeps the parsed report in page memory only.",
     storageTitle: "What The Server Stores",
@@ -98,9 +99,12 @@ export const messages = {
     loading: "Loading stats...",
     unavailable: "Stats are unavailable right now.",
     gridLabel: "Public aggregate stats",
+    chartTitle: "Charts",
+    chartSectionLabel: "Stats charts",
     lastUpdated: "Last updated {timestamp}",
     notRecorded: "No events recorded yet.",
     successRate: "Analysis Success Rate",
+    localActions: "Local Actions",
     eventDescriptions: {
       page_view: "Analyzer page visits.",
       report_analyzed: "Reports successfully parsed and rendered.",
@@ -111,6 +115,7 @@ export const messages = {
       json_export: "Export JSON actions.",
       print_opened: "Print Report actions.",
       analysis_success_rate: "Successful analyses divided by successful analyses plus parse failures.",
+      local_actions: "Copy, export, and print actions initiated in the browser.",
     },
     events: {
       page_view: "Visits",
@@ -121,6 +126,20 @@ export const messages = {
       summary_copied: "Summaries Copied",
       json_export: "JSON Exports",
       print_opened: "Print Opens",
+    },
+    charts: {
+      activityMix: {
+        title: "Activity Mix",
+        description: "Visits, successful analyses, parse failures, and browser-only follow-up actions.",
+      },
+      analysisOutcome: {
+        title: "Analysis Outcome",
+        description: "Successful parses compared with reports that could not be parsed.",
+      },
+      sourceMix: {
+        title: "Analysis Source",
+        description: "Public example analyses compared with browser-local file analyses.",
+      },
     },
   },
   report: {
