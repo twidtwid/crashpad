@@ -26,10 +26,12 @@ const els = {
   reportTitle: document.querySelector("#reportTitle"),
   copySummary: document.querySelector("#copySummary"),
   downloadJson: document.querySelector("#downloadJson"),
+  printReport: document.querySelector("#printReport"),
   clearReport: document.querySelector("#clearReport"),
   emptyState: document.querySelector("#emptyState"),
   errorState: document.querySelector("#errorState"),
   reportView: document.querySelector("#reportView"),
+  printView: document.querySelector("#printView"),
   tabs: document.querySelectorAll(".tab"),
   focusToggle: document.querySelector("#focusToggle"),
 };
@@ -101,6 +103,7 @@ function wireEvents() {
 
   els.copySummary.addEventListener("click", copySummary);
   els.downloadJson.addEventListener("click", downloadAnalysisJson);
+  els.printReport.addEventListener("click", printCurrentReport);
   els.clearReport.addEventListener("click", clearReport);
   els.focusToggle.addEventListener("click", () => {
     els.body.classList.toggle("focus-mode");
@@ -224,6 +227,7 @@ function render() {
   els.reportView.hidden = !hasReport;
   els.copySummary.disabled = !hasReport;
   els.downloadJson.disabled = !hasReport;
+  els.printReport.disabled = !hasReport;
   els.clearReport.disabled = !hasReport && !hasError;
   syncTabs();
 
@@ -235,6 +239,7 @@ function render() {
       <h2>${escapeHtml(t("error.title"))}</h2>
       <p>${escapeHtml(state.error.message)}</p>
     `;
+    els.printView.innerHTML = "";
     return;
   }
 
@@ -242,6 +247,7 @@ function render() {
     els.reportTitle.textContent = t("app.noReportLoaded");
     els.statusBox.className = "status-box";
     els.statusBox.textContent = t("status.waiting");
+    els.printView.innerHTML = "";
     return;
   }
 
@@ -253,6 +259,7 @@ function render() {
     ? t("status.uploadParsed", { process: processName })
     : t("status.sampleParsed", { process: processName, frameCount: analysis.crashedThread.frames.length });
   renderReport();
+  renderPrintReport();
 }
 
 function clearReport() {
@@ -286,6 +293,71 @@ function renderReport() {
     els.reportView.innerHTML = renderSummary();
   }
   els.reportView.setAttribute("aria-busy", "false");
+}
+
+function renderPrintReport() {
+  if (!state.analysis) {
+    els.printView.innerHTML = "";
+    return;
+  }
+
+  const { analysis } = state;
+  const originalQuery = state.query;
+  const originalShowSystemFrames = state.showSystemFrames;
+
+  const title = `${analysis.identity.process || t("app.fallbackReportTitle")}${analysis.fileName ? ` - ${analysis.fileName}` : ""}`;
+  const generatedAt = new Date().toLocaleString();
+  const metadata = definitionList([
+    [t("report.fields.process"), processLine(analysis)],
+    [t("report.fields.bundleId"), analysis.identity.bundleId],
+    [t("report.fields.version"), analysis.identity.version],
+    [t("report.fields.osVersion"), analysis.environment.osVersion],
+    [t("report.fields.hardware"), analysis.environment.model],
+    [t("report.fields.crashTime"), analysis.environment.crashedAt],
+    [t("report.print.sourceFile"), analysis.fileName],
+  ]);
+
+  let summary;
+  let threads;
+  let images;
+  try {
+    state.query = "";
+    state.showSystemFrames = true;
+    summary = renderSummary();
+    threads = renderThreads();
+    images = renderImages();
+  } finally {
+    state.query = originalQuery;
+    state.showSystemFrames = originalShowSystemFrames;
+  }
+
+  els.printView.innerHTML = `
+    <article class="print-report">
+      <header class="print-report-header">
+        <div>
+          <p class="kicker">${escapeHtml(t("app.name"))}</p>
+          <h1>${escapeHtml(title)}</h1>
+          <p>${escapeHtml(t("report.print.generatedAt", { timestamp: generatedAt }))}</p>
+        </div>
+        <div class="print-report-meta">
+          ${metadata}
+        </div>
+      </header>
+      <div class="print-report-body">
+        ${summary}
+      </div>
+      <section class="print-page-block">
+        <h2>${escapeHtml(t("report.print.fullThreads"))}</h2>
+        ${threads}
+      </section>
+      <section class="print-page-block">
+        ${images}
+      </section>
+      <footer class="print-report-footer">
+        ${escapeHtml(t("report.print.generatedBy"))}
+      </footer>
+    </article>
+  `;
 }
 
 function syncTabs() {
@@ -589,6 +661,13 @@ function downloadAnalysisJson() {
   link.click();
   URL.revokeObjectURL(url);
   flashStatus(t("status.jsonExported"));
+}
+
+function printCurrentReport() {
+  if (!state.analysis) return;
+  renderPrintReport();
+  flashStatus(t("status.printReady"));
+  window.print();
 }
 
 function flashStatus(message) {

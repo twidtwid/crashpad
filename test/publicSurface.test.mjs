@@ -43,6 +43,25 @@ test("project links stay in the sidebar instead of the report action bar", async
   assert.doesNotMatch(actionBar, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
 });
 
+test("exposes a printable report surface and print action", async () => {
+  const [html, app, css, messages] = await Promise.all([
+    readProjectFile("index.html"),
+    readProjectFile("src/app.js"),
+    readProjectFile("src/styles.css"),
+    readProjectFile("src/i18n/en.js"),
+  ]);
+
+  assert.match(html, /id="printReport"/);
+  assert.match(html, /id="printView"/);
+  assert.match(html, /class="print-view"/);
+  assert.match(app, /printReport/);
+  assert.match(app, /renderPrintReport/);
+  assert.match(app, /window\.print\(\)/);
+  assert.match(css, /@media print/);
+  assert.match(css, /\.print-view/);
+  assert.match(messages, /printReport: "Print Report"/);
+});
+
 test("browser app does not use persistent storage APIs for uploaded reports", async () => {
   const app = await readProjectFile("src/app.js");
 
