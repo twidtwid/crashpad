@@ -13,8 +13,42 @@
   <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
+  <div class="sidebar-control">
+    <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Hide sidebar" aria-label="Hide sidebar" aria-controls="controlRail" aria-expanded="true" data-i18n-title="actions.hideSidebar" data-i18n-aria-label="actions.hideSidebar">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <rect x="4" y="5" width="16" height="14" rx="2"></rect>
+        <path d="M10 5v14"></path>
+        <path class="sidebar-collapse-mark" d="m16 9-3 3 3 3"></path>
+        <path class="sidebar-expand-mark" d="m13 9 3 3-3 3"></path>
+      </svg>
+    </button>
+  </div>
+
+  <div class="theme-control" role="group" aria-label="Appearance" data-i18n-aria-label="controls.appearance">
+    <button class="theme-toggle" id="themeToggle" type="button" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false" data-i18n-title="actions.switchToDarkMode" data-i18n-aria-label="actions.switchToDarkMode">
+      <span class="theme-icon sun-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 3v2"></path>
+          <path d="M12 19v2"></path>
+          <path d="m4.2 4.2 1.4 1.4"></path>
+          <path d="m18.4 18.4 1.4 1.4"></path>
+          <path d="M3 12h2"></path>
+          <path d="M19 12h2"></path>
+          <path d="m4.2 19.8 1.4-1.4"></path>
+          <path d="m18.4 5.6 1.4-1.4"></path>
+        </svg>
+      </span>
+      <span class="theme-icon moon-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M20 14.2A7.4 7.4 0 0 1 9.8 4a8.1 8.1 0 1 0 10.2 10.2z"></path>
+        </svg>
+      </span>
+    </button>
+  </div>
+
   <div class="app-shell">
-    <aside class="rail" aria-label="Crash report controls" data-i18n-aria-label="controls.ariaLabel">
+    <aside class="rail" id="controlRail" aria-label="Crash report controls" data-i18n-aria-label="controls.ariaLabel">
       <div class="brand-row">
         <h1 data-i18n="app.name">CrashPad</h1>
       </div>
@@ -63,19 +97,11 @@
           <p class="kicker" data-i18n="app.kicker">Apple Crash Report Analyzer</p>
           <h2 id="reportTitle" data-i18n="app.noReportLoaded">No report loaded</h2>
         </div>
-        <div class="topbar-controls">
-          <div class="utility-buttons" role="group" aria-label="View controls" data-i18n-aria-label="controls.viewControls">
-            <button class="icon-button focus-toggle" id="focusToggle" type="button" title="Toggle focus mode" aria-label="Toggle focus mode" aria-pressed="false" data-i18n-title="actions.focusToggle" data-i18n-aria-label="actions.focusToggle">
-              <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
-            </button>
-            <button class="theme-toggle" id="themeToggle" type="button" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false" data-i18n="actions.darkMode" data-i18n-title="actions.switchToDarkMode" data-i18n-aria-label="actions.switchToDarkMode">Dark</button>
-          </div>
-          <div class="actions">
-            <button id="clearReport" type="button" class="secondary-button" disabled data-i18n="actions.forgetReport">Forget Report</button>
-            <button id="printReport" type="button" class="secondary-button" disabled data-i18n="actions.printReport">Print Report</button>
-            <button id="downloadJson" type="button" class="secondary-button" disabled data-i18n="actions.exportJson">Export JSON</button>
-            <button id="copySummary" type="button" class="primary-button" disabled data-i18n="actions.copySummary">Copy Summary</button>
-          </div>
+        <div class="actions">
+          <button id="clearReport" type="button" class="secondary-button" disabled data-i18n="actions.forgetReport">Forget Report</button>
+          <button id="printReport" type="button" class="secondary-button" disabled data-i18n="actions.printReport">Print Report</button>
+          <button id="downloadJson" type="button" class="secondary-button" disabled data-i18n="actions.exportJson">Export JSON</button>
+          <button id="copySummary" type="button" class="primary-button" disabled data-i18n="actions.copySummary">Copy Summary</button>
         </div>
       </header>
 

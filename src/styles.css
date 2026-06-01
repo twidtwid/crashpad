@@ -24,6 +24,17 @@
   --font-serif: "Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --page-top: 18px;
+  --page-inset-x: 16px;
+  --edge-control-top: max(var(--page-top), env(safe-area-inset-top));
+  --edge-control-left: max(var(--page-inset-x), env(safe-area-inset-left));
+  --top-control-height: 26px;
+  --top-control-radius: 5px;
+  --edge-control-size: var(--top-control-height);
+  --edge-control-gap: 16px;
+  --theme-control-width: 50px;
+  --left-control-reserve: calc(var(--edge-control-size) + var(--edge-control-gap));
+  --right-control-reserve: calc(var(--theme-control-width) + var(--edge-control-gap));
 }
 
 html[data-theme="dark"] {
@@ -107,7 +118,7 @@ button {
   align-items: start;
   border-bottom: 1px solid var(--rule);
   background: var(--rail-bg);
-  padding: 14px 16px 16px;
+  padding: var(--page-top) var(--page-inset-x) 16px;
 }
 
 .brand-row {
@@ -115,6 +126,8 @@ button {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-height: var(--edge-control-size);
+  padding-left: var(--left-control-reserve);
   padding-bottom: 13px;
   border-bottom: 1px solid var(--rule);
 }
@@ -124,25 +137,111 @@ button {
   font: 700 1.45rem/1.1 var(--font-serif);
 }
 
-.icon-button {
-  display: inline-grid;
-  gap: 4px;
-  place-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid transparent;
-  background: transparent;
+.sidebar-control {
+  position: fixed;
+  top: var(--edge-control-top);
+  left: var(--edge-control-left);
+  z-index: 60;
+}
+
+.theme-control {
+  position: fixed;
+  top: var(--edge-control-top);
+  right: max(var(--page-inset-x), env(safe-area-inset-right));
+  z-index: 60;
+}
+
+.sidebar-toggle,
+.theme-toggle,
+.actions .primary-button,
+.actions .secondary-button {
+  min-height: var(--top-control-height);
+  height: var(--top-control-height);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--top-control-radius);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   color: var(--ink);
-  border-radius: 6px;
   cursor: pointer;
 }
 
-.icon-button span {
+.sidebar-toggle {
+  display: grid;
+  place-items: center;
+  width: var(--edge-control-size);
+  padding: 0;
+}
+
+.sidebar-toggle:hover,
+.theme-toggle:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.sidebar-toggle[aria-expanded="false"] {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 72%, var(--rule-strong));
+}
+
+.sidebar-icon,
+.theme-icon svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sidebar-expand-mark {
+  display: none;
+}
+
+.focus-mode .sidebar-collapse-mark {
+  display: none;
+}
+
+.focus-mode .sidebar-expand-mark {
   display: block;
-  width: 16px;
-  height: 2px;
-  background: currentColor;
+}
+
+.theme-toggle {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: center;
+  width: var(--theme-control-width);
+  padding: 2px;
+}
+
+.theme-toggle::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--accent);
+  transform: translateX(0);
+  transition: transform 160ms ease;
+}
+
+.theme-toggle[aria-pressed="true"]::before {
+  transform: translateX(24px);
+}
+
+.theme-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.theme-toggle[aria-pressed="false"] .sun-icon,
+.theme-toggle[aria-pressed="true"] .moon-icon {
+  color: var(--accent-contrast);
 }
 
 .rail-section {
@@ -355,7 +454,7 @@ button {
 .workspace {
   min-width: 0;
   overflow-x: hidden;
-  padding: 18px clamp(14px, 3vw, 26px) 56px;
+  padding: var(--page-top) clamp(14px, 3vw, 26px) 56px;
 }
 
 .topbar {
@@ -363,6 +462,7 @@ button {
   align-items: start;
   justify-content: space-between;
   gap: 18px;
+  padding-right: var(--right-control-reserve);
   padding-bottom: 14px;
   border-bottom: 1px solid var(--rule);
 }
@@ -382,52 +482,6 @@ button {
   min-width: 0;
 }
 
-.topbar-controls {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.utility-buttons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.topbar .icon-button,
-.theme-toggle {
-  min-height: 30px;
-  height: 30px;
-  border: 1px solid var(--rule-strong);
-  background: var(--surface);
-  color: var(--ink);
-  border-radius: 5px;
-}
-
-.topbar .icon-button {
-  width: 30px;
-}
-
-.topbar .icon-button span {
-  width: 14px;
-}
-
-.focus-toggle[aria-pressed="true"],
-.theme-toggle[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-contrast);
-}
-
-.theme-toggle {
-  padding: 4px 9px;
-  cursor: pointer;
-  font-size: 0.82rem;
-  line-height: 1.1;
-}
-
 .actions {
   display: flex;
   gap: 8px;
@@ -437,11 +491,15 @@ button {
 
 .actions .primary-button,
 .actions .secondary-button {
-  min-height: 30px;
-  border-radius: 5px;
-  padding: 4px 10px;
-  font-size: 0.92rem;
-  line-height: 1.2;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+.actions .primary-button {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .actions .secondary-link {
@@ -862,6 +920,10 @@ html[data-theme="dark"] mark {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.focus-mode .workspace {
+  padding-left: max(calc(var(--page-inset-x) + var(--left-control-reserve)), env(safe-area-inset-left));
+}
+
 @media (min-width: 720px) {
   .summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -932,10 +994,6 @@ html[data-theme="dark"] mark {
 
   .topbar {
     display: grid;
-  }
-
-  .topbar-controls {
-    justify-content: start;
   }
 
   .actions {
@@ -1015,6 +1073,8 @@ html[data-theme="dark"] mark {
   }
 
   .rail,
+  .sidebar-control,
+  .theme-control,
   .topbar,
   .tabs,
   .empty-state,

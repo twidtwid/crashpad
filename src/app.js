@@ -12,7 +12,7 @@ const state = {
   analysis: null,
   error: null,
   source: "",
-  focusMode: false,
+  sidebarHidden: false,
   theme: "light",
 };
 
@@ -35,7 +35,7 @@ const els = {
   reportView: document.querySelector("#reportView"),
   printView: document.querySelector("#printView"),
   tabs: document.querySelectorAll(".tab"),
-  focusToggle: document.querySelector("#focusToggle"),
+  sidebarToggle: document.querySelector("#sidebarToggle"),
   themeToggle: document.querySelector("#themeToggle"),
 };
 
@@ -44,7 +44,7 @@ init();
 async function init() {
   applyStaticTranslations();
   wireEvents();
-  setFocusMode(false);
+  setSidebarHidden(false);
   setTheme("light");
   await loadSamples();
   if (state.samples.length) {
@@ -110,17 +110,17 @@ function wireEvents() {
   els.downloadJson.addEventListener("click", downloadAnalysisJson);
   els.printReport.addEventListener("click", printCurrentReport);
   els.clearReport.addEventListener("click", clearReport);
-  els.focusToggle.addEventListener("click", () => setFocusMode(!state.focusMode));
+  els.sidebarToggle.addEventListener("click", () => setSidebarHidden(!state.sidebarHidden));
   els.themeToggle.addEventListener("click", () => setTheme(state.theme === "dark" ? "light" : "dark"));
 }
 
-function setFocusMode(enabled) {
-  state.focusMode = enabled;
-  els.body.classList.toggle("focus-mode", enabled);
-  els.focusToggle.setAttribute("aria-pressed", String(enabled));
-  const label = t(enabled ? "actions.exitFocusMode" : "actions.focusToggle");
-  els.focusToggle.setAttribute("aria-label", label);
-  els.focusToggle.title = label;
+function setSidebarHidden(hidden) {
+  state.sidebarHidden = hidden;
+  els.body.classList.toggle("focus-mode", hidden);
+  els.sidebarToggle.setAttribute("aria-expanded", String(!hidden));
+  const label = t(hidden ? "actions.showSidebar" : "actions.hideSidebar");
+  els.sidebarToggle.setAttribute("aria-label", label);
+  els.sidebarToggle.title = label;
 }
 
 function setTheme(theme) {
@@ -129,7 +129,6 @@ function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   els.themeToggle.setAttribute("aria-pressed", String(isDark));
   const label = t(isDark ? "actions.switchToLightMode" : "actions.switchToDarkMode");
-  els.themeToggle.textContent = t(isDark ? "actions.lightMode" : "actions.darkMode");
   els.themeToggle.setAttribute("aria-label", label);
   els.themeToggle.title = label;
 }

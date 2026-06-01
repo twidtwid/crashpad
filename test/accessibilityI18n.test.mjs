@@ -39,7 +39,7 @@ test("report UI exposes accessible status, upload help, and tab semantics", asyn
   assert.match(html, /role="tablist"/);
   assert.match(html, /id="privacyNote"/);
   assert.match(html, /aria-describedby="privacyNote"/);
-  assert.match(html, /<span aria-hidden="true"><\/span>/);
+  assert.match(html, /aria-hidden="true"/);
 });
 
 test("styles provide explicit keyboard focus affordances", async () => {
@@ -70,7 +70,8 @@ test("static pages and dynamic app strings are prepared for translation", async 
 
   assert.match(index, /data-i18n="app.name"/);
   assert.match(index, /data-i18n-placeholder="filters.searchPlaceholder"/);
-  assert.match(index, /data-i18n-aria-label="actions.focusToggle"/);
+  assert.match(index, /data-i18n-aria-label="actions.hideSidebar"/);
+  assert.match(index, /data-i18n-aria-label="actions.switchToDarkMode"/);
   assert.match(privacy, /data-i18n="privacy.title"/);
   assert.match(privacy, /type="module" src="\/src\/i18n\/page.js"/);
 

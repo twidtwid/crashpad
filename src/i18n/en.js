@@ -10,13 +10,12 @@ export const messages = {
   controls: {
     ariaLabel: "Crash report controls",
     viewControls: "View controls",
+    appearance: "Appearance",
   },
   actions: {
-    focusToggle: "Toggle focus mode",
-    exitFocusMode: "Exit focus mode",
+    hideSidebar: "Hide sidebar",
+    showSidebar: "Show sidebar",
     themeToggle: "Toggle light/dark mode",
-    darkMode: "Dark",
-    lightMode: "Light",
     switchToDarkMode: "Switch to dark mode",
     switchToLightMode: "Switch to light mode",
     privacy: "Privacy",

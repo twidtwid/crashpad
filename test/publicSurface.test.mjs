@@ -58,7 +58,7 @@ test("project links stay in the sidebar instead of the report action bar", async
   assert.doesNotMatch(actionBar, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
 });
 
-test("topbar exposes persistent focus and color mode controls", async () => {
+test("sidebar and theme controls stay fixed at their natural screen edges", async () => {
   const [html, app, css, messages] = await Promise.all([
     readProjectFile("index.html"),
     readProjectFile("src/app.js"),
@@ -67,24 +67,41 @@ test("topbar exposes persistent focus and color mode controls", async () => {
   ]);
   const rail = html.match(/<aside class="rail"[\s\S]*?<\/aside>/)?.[0] ?? "";
   const topbar = html.match(/<header class="topbar">[\s\S]*?<\/header>/)?.[0] ?? "";
+  const sidebarControl = html.match(/<div class="sidebar-control"[\s\S]*?<\/div>/)?.[0] ?? "";
+  const themeControl = html.match(/<div class="theme-control"[\s\S]*?<\/div>/)?.[0] ?? "";
 
-  assert.doesNotMatch(rail, /id="focusToggle"/);
-  assert.match(topbar, /id="focusToggle"/);
-  assert.match(topbar, /id="themeToggle"/);
-  assert.match(topbar, /class="utility-buttons" role="group"/);
-  assert.match(topbar, /class="topbar-controls"/);
-  assert.match(app, /setFocusMode/);
+  assert.doesNotMatch(rail, /id="sidebarToggle"|id="themeToggle"|id="focusToggle"/);
+  assert.doesNotMatch(topbar, /id="sidebarToggle"|id="themeToggle"|id="focusToggle"|topbar-controls/);
+  assert.match(sidebarControl, /id="sidebarToggle"/);
+  assert.match(sidebarControl, /class="sidebar-toggle"/);
+  assert.match(sidebarControl, /class="sidebar-icon"/);
+  assert.doesNotMatch(sidebarControl, /<span aria-hidden="true"><\/span><span aria-hidden="true"><\/span><span aria-hidden="true"><\/span>/);
+  assert.match(themeControl, /role="group"/);
+  assert.match(themeControl, /id="themeToggle"/);
+  assert.match(themeControl, /class="theme-toggle"/);
+  assert.match(themeControl, /class="theme-icon sun-icon"/);
+  assert.match(themeControl, /class="theme-icon moon-icon"/);
+  assert.doesNotMatch(themeControl, />Dark<|>Light</);
+  assert.match(app, /setSidebarHidden/);
   assert.match(app, /setTheme/);
   assert.match(css, /html\[data-theme="dark"\]/);
+  assert.match(css, /\.sidebar-control\s*{[\s\S]*position:\s*fixed[\s\S]*left:\s*max/);
+  assert.match(css, /\.theme-control\s*{[\s\S]*position:\s*fixed[\s\S]*right:\s*max/);
+  assert.match(css, /--page-top:\s*18px/);
+  assert.match(css, /padding:\s*var\(--page-top\)/);
   assert.match(messages, /themeToggle/);
 });
 
 test("topbar action buttons use a compact density", async () => {
   const css = await readProjectFile("src/styles.css");
 
+  assert.match(css, /--top-control-height:\s*26px/);
+  assert.match(css, /--top-control-radius:\s*5px/);
+  assert.match(css, /\.sidebar-toggle,\s*\.theme-toggle,\s*\.actions \.primary-button,\s*\.actions \.secondary-button/);
   assert.match(css, /\.actions \.primary-button,\s*\.actions \.secondary-button/);
-  assert.match(css, /min-height:\s*30px/);
-  assert.match(css, /padding:\s*4px 10px/);
+  assert.match(css, /min-height:\s*var\(--top-control-height\)/);
+  assert.match(css, /padding:\s*2px 8px/);
+  assert.match(css, /font-size:\s*0\.8rem/);
 });
 
 test("exposes a printable report surface and print action", async () => {
