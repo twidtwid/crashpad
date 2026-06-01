@@ -16,7 +16,7 @@
     "start": "node scripts/server.js",
     "test": "node --test test/*.test.mjs",
     "analyze": "node scripts/analyze-folder.js",
-    "check": "node --check src/app.js && node --check src/crashParser.js && node --check src/i18n/en.js && node --check src/i18n/dom.js && node --check src/i18n/page.js && node --check scripts/server.js && node --check scripts/analyze-folder.js",
+    "check": "node --check src/app.js && node --check src/stats.js && node --check src/crashParser.js && node --check src/i18n/en.js && node --check src/i18n/dom.js && node --check src/i18n/page.js && node --check scripts/server.js && node --check scripts/analyze-folder.js",
     "ci": "npm run check && npm test"
   }
 }

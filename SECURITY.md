@@ -12,4 +12,4 @@ Do not attach real crash reports, proprietary stack traces, or user-identifying 
 
 ## Data Handling
 
-Crash reports can include sensitive metadata. The app is designed to run locally and does not upload reports to any external service. The repository ignores real `.ips` and `.crash` files by default.
+Crash reports can include sensitive metadata. The app is designed to run locally and does not upload reports to any external service. The hosted server records public aggregate counters such as visits and analyses, but it does not store IP addresses, user agents, file names, report contents, stack traces, or identifiers. The repository ignores real `.ips` and `.crash` files by default.

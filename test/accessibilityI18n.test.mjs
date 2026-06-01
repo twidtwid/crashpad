@@ -53,9 +53,10 @@ test("styles provide explicit keyboard focus affordances", async () => {
 });
 
 test("static pages and dynamic app strings are prepared for translation", async () => {
-  const [index, privacy, app, en, dom, page] = await Promise.all([
+  const [index, privacy, stats, app, en, dom, page] = await Promise.all([
     readProjectFile("index.html"),
     readProjectFile("privacy.html"),
+    readProjectFile("stats.html"),
     readProjectFile("src/app.js"),
     readProjectFile("src/i18n/en.js"),
     readProjectFile("src/i18n/dom.js"),
@@ -74,6 +75,9 @@ test("static pages and dynamic app strings are prepared for translation", async 
   assert.match(index, /data-i18n-aria-label="actions.switchToDarkMode"/);
   assert.match(privacy, /data-i18n="privacy.title"/);
   assert.match(privacy, /type="module" src="\/src\/i18n\/page.js"/);
+  assert.match(stats, /data-i18n="stats.title"/);
+  assert.match(stats, /data-i18n="stats.intro"/);
+  assert.match(stats, /type="module" src="\/src\/stats.js"/);
 
   assert.match(app, /from "\.\/i18n\/en\.js"/);
   assert.match(app, /from "\.\/i18n\/dom\.js"/);

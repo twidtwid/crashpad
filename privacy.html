@@ -20,7 +20,12 @@
 
     <section>
       <h2 data-i18n="privacy.storageTitle">What The Server Stores</h2>
-      <p data-i18n="privacy.storageBody">The server hosts the static app and read-only sample routes for the public QLThumbnail example report. It rejects POST and PUT requests, has no route that receives crash report files, and never writes chosen reports to disk.</p>
+      <p data-i18n="privacy.storageBody">The server hosts the static app, read-only sample routes for the public QLThumbnail example report, and aggregate stats routes. It has no route that receives crash report files and never writes chosen reports to disk.</p>
+    </section>
+
+    <section>
+      <h2 data-i18n="privacy.analyticsTitle">Aggregate Stats</h2>
+      <p data-i18n="privacy.analyticsBody">CrashPad records non-identifiable aggregate stats such as visits, reports analyzed, example versus browser-local analyses, parse failures, and user-triggered print, export, and copy actions. The stats store is public counters only and does not store IP addresses, user agents, file names, report contents, stack traces, or identifiers.</p>
     </section>
 
     <section>
@@ -40,7 +45,8 @@
 
     <p class="policy-actions">
       <a class="primary-link" href="/" data-i18n="actions.openAnalyzer">Open Analyzer</a>
-      <a class="secondary-link" href="https://github.com/twidtwid/crashreporter" rel="noopener noreferrer" data-i18n="actions.githubRepository">GitHub Repository</a>
+      <a class="secondary-link" href="/stats" data-i18n="stats.title">Stats</a>
+      <a class="secondary-link external-link" href="https://github.com/twidtwid/crashreporter" target="_blank" rel="noopener noreferrer" data-i18n="actions.githubRepository">GitHub Repository</a>
     </p>
   </main>
   <script type="module" src="/src/i18n/page.js"></script>

@@ -3,7 +3,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY package.json ./
-COPY index.html privacy.html ./
+COPY index.html privacy.html stats.html ./
 COPY examples ./examples
 COPY scripts ./scripts
 COPY src ./src

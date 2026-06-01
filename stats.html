@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Public aggregate stats for CrashPad." data-i18n-content="stats.metaDescription">
+  <title data-i18n="stats.pageTitle">Stats - CrashPad</title>
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <main class="policy-page stats-page">
+    <p class="kicker" data-i18n="app.name">CrashPad</p>
+    <h1 data-i18n="stats.title">Stats</h1>
+    <p data-i18n="stats.intro">Public aggregate counters for CrashPad usage. These are non-identifiable totals and do not include crash report contents, file names, stack traces, IP addresses, user agents, or identifiers.</p>
+
+    <div id="statsStatus" class="stats-status" role="status" aria-live="polite" data-i18n="stats.loading">Loading stats...</div>
+    <section id="statsGrid" class="stats-grid" aria-live="polite" aria-label="Public aggregate stats" data-i18n-aria-label="stats.gridLabel"></section>
+
+    <p class="policy-actions">
+      <a class="primary-link" href="/" data-i18n="actions.openAnalyzer">Open Analyzer</a>
+      <a class="secondary-link" href="/privacy" data-i18n="privacy.title">Privacy Policy</a>
+      <a class="secondary-link external-link" href="https://github.com/twidtwid/crashreporter" target="_blank" rel="noopener noreferrer" data-i18n="actions.githubRepository">GitHub Repository</a>
+    </p>
+  </main>
+  <script type="module" src="/src/stats.js"></script>
+</body>
+</html>

@@ -11,5 +11,8 @@ npm-debug.log*
 # Generated local analysis output can contain crash-report details.
 reports/
 
+# Local aggregate analytics counters.
+.data/
+
 # Agent planning scratch.
 docs/superpowers/

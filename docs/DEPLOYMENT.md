@@ -17,6 +17,7 @@ The deploy archive should contain only:
 - `package.json`
 - `index.html`
 - `privacy.html`
+- `stats.html`
 - `examples/`
 - `scripts/`
 - `src/`
@@ -37,7 +38,7 @@ Create a public-safe archive from `HEAD`:
 
 ```sh
 git archive --format=tar.gz -o /tmp/crashpad-sprite.tar.gz HEAD \
-  package.json index.html privacy.html examples scripts src
+  package.json index.html privacy.html stats.html examples scripts src
 ```
 
 Upload, unpack, restart, and verify inside the Sprite:
@@ -72,9 +73,12 @@ After the remote health check passes, verify the public Sprite:
 
 ```sh
 curl -fsS https://crashpad-bq3fs.sprites.app/ -o /tmp/crashpad-sprite-index.html
+curl -fsS https://crashpad-bq3fs.sprites.app/stats -o /tmp/crashpad-sprite-stats.html
 curl -fsS https://crashpad-bq3fs.sprites.app/src/app.js -o /tmp/crashpad-sprite-app.js
 curl -fsS https://crashpad-bq3fs.sprites.app/api/samples
+curl -fsS https://crashpad-bq3fs.sprites.app/api/stats
 rg -n "CrashPad|src/app.js" /tmp/crashpad-sprite-index.html
+rg -n "statsGrid|src/stats.js" /tmp/crashpad-sprite-stats.html
 rg -n "renderCrashStory|renderCollectionContext|renderSymbolicationReadiness" /tmp/crashpad-sprite-app.js
 ```
 

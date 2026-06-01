@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Ephemeral Apple crash report analyzer for .ips and .crash files." data-i18n-content="app.description">
   <meta property="og:title" content="CrashPad" data-i18n-content="app.name">
-  <meta property="og:description" content="Upload Apple crash reports and inspect a structured diagnostic report." data-i18n-content="app.ogDescription">
+  <meta property="og:description" content="Open Apple crash reports and inspect a structured diagnostic report." data-i18n-content="app.ogDescription">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="CrashPad" data-i18n-content="app.name">
   <meta name="twitter:card" content="summary">
@@ -87,7 +87,8 @@
       <section class="rail-section project-links">
         <h2 data-i18n="project.title">Project</h2>
         <a href="/privacy" data-i18n="privacy.title">Privacy Policy</a>
-        <a href="https://github.com/twidtwid/crashreporter" rel="noopener noreferrer" data-i18n="actions.githubRepository">GitHub Repository</a>
+        <a href="/stats" data-i18n="stats.title">Stats</a>
+        <a class="external-link" href="https://github.com/twidtwid/crashreporter" target="_blank" rel="noopener noreferrer" data-i18n="actions.githubRepository">GitHub Repository</a>
       </section>
     </aside>
 
@@ -114,7 +115,7 @@
 
       <section id="emptyState" class="empty-state" aria-labelledby="emptyStateTitle">
         <h2 id="emptyStateTitle" data-i18n="empty.title">Upload or select a crash report.</h2>
-        <p data-i18n-html="empty.bodyHtml">The harness parses Apple IPS JSON reports as documented by Apple: metadata JSON on line one, crash report JSON after it, and <code>bug_type</code> <code>309</code> for crash reports. Uploaded reports stay in this browser tab until you reload, close the tab, or click Forget Report.</p>
+        <p data-i18n-html="empty.bodyHtml">The harness parses Apple IPS JSON reports as documented by Apple: metadata JSON on line one, crash report JSON after it, and <code>bug_type</code> <code>309</code> for crash reports. Chosen reports stay in this browser tab until you reload, close the tab, or click Forget Report.</p>
       </section>
 
       <section id="errorState" class="error-state" role="alert" aria-live="assertive" aria-atomic="true" hidden></section>

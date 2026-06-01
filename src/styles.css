@@ -836,6 +836,15 @@ tr:last-child td {
   color: var(--accent-strong);
 }
 
+.external-link[target="_blank"]::after {
+  content: "\2197";
+  display: inline-block;
+  margin-left: 0.28em;
+  font-size: 0.78em;
+  line-height: 1;
+  transform: translateY(-0.08em);
+}
+
 .diagnostic-list,
 .recommendations {
   display: grid;
@@ -928,6 +937,97 @@ tr:last-child td {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 30px;
+}
+
+.stats-page {
+  max-width: 980px;
+}
+
+.stats-status {
+  margin: 22px 0 12px;
+  color: var(--muted);
+  font: 0.82rem/1.4 var(--font-mono);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 10px;
+}
+
+.stat-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.stat-card-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.stat-card-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.stat-card-icon::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.stat-card[data-event="report_analyzed"] .stat-card-icon,
+.stat-card[data-event="browser_report_analyzed"] .stat-card-icon,
+.stat-card[data-event="sample_report_analyzed"] .stat-card-icon,
+.stat-card[data-event="analysis_success_rate"] .stat-card-icon {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.stat-card[data-event="parse_error"] .stat-card-icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.stat-card[data-event="json_export"] .stat-card-icon,
+.stat-card[data-event="summary_copied"] .stat-card-icon,
+.stat-card[data-event="print_opened"] .stat-card-icon {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.stat-card strong {
+  color: var(--ink);
+  font: 700 1.75rem/1 var(--font-serif);
+}
+
+.stat-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.stat-label {
+  color: var(--muted);
+  font: 0.7rem/1.3 var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 mark {

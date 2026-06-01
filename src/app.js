@@ -46,6 +46,7 @@ async function init() {
   wireEvents();
   setSidebarHidden(false);
   setTheme("light");
+  trackStatEvent("page_view");
   await loadSamples();
   if (state.samples.length) {
     await loadSample(state.samples[0].name);
@@ -227,11 +228,18 @@ function loadText(text, fileName, source = "") {
     state.error = null;
     state.source = source;
     state.activeTab = "summary";
+    trackStatEvent("report_analyzed");
+    if (source === "sample") {
+      trackStatEvent("sample_report_analyzed");
+    } else {
+      trackStatEvent("browser_report_analyzed");
+    }
     render();
   } catch (error) {
     state.parsed = null;
     state.analysis = null;
     state.source = "";
+    trackStatEvent("parse_error");
     setError(error);
   }
 }
@@ -744,6 +752,7 @@ async function copySummary() {
     ...analysis.recommendations.map((item) => `- ${item}`),
   ].join("\n");
   await navigator.clipboard.writeText(text);
+  trackStatEvent("summary_copied");
   flashStatus(t("status.summaryCopied"));
 }
 
@@ -757,14 +766,25 @@ function downloadAnalysisJson() {
   link.download = `${state.analysis.identity.process || "crash-report"}.analysis.json`;
   link.click();
   URL.revokeObjectURL(url);
+  trackStatEvent("json_export");
   flashStatus(t("status.jsonExported"));
 }
 
 function printCurrentReport() {
   if (!state.analysis) return;
   renderPrintReport();
+  trackStatEvent("print_opened");
   flashStatus(t("status.printReady"));
   window.print();
+}
+
+function trackStatEvent(eventName) {
+  return fetch("/api/stats/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: eventName }),
+    keepalive: true,
+  }).catch(() => {});
 }
 
 function flashStatus(message) {
@@ -818,7 +838,7 @@ function highlight(value) {
 function renderReferenceLink(label, url) {
   const safeUrl = safeReferenceUrl(url);
   if (!safeUrl) return highlight(label);
-  return `<a class="reference-link" href="${escapeAttr(safeUrl)}" target="_blank" rel="noopener noreferrer">${highlight(label)}</a>`;
+  return `<a class="reference-link external-link" href="${escapeAttr(safeUrl)}" target="_blank" rel="noopener noreferrer">${highlight(label)}</a>`;
 }
 
 function safeReferenceUrl(url) {

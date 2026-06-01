@@ -8,4 +8,5 @@ npm-debug.log*
 !examples/qlthumbnail.ips
 
 reports
+.data
 docs/superpowers

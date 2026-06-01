@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { readFile, stat } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,9 +7,22 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exampleRoot = path.join(root, "examples");
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "127.0.0.1";
+const statsPath = path.resolve(process.env.CRASHPAD_STATS_PATH || path.join(root, ".data", "stats.json"));
 const publicSamples = [
   { name: "examples/qlthumbnail.ips", filePath: path.join(exampleRoot, "qlthumbnail.ips") },
 ];
+const STAT_EVENTS = [
+  "page_view",
+  "report_analyzed",
+  "browser_report_analyzed",
+  "sample_report_analyzed",
+  "parse_error",
+  "summary_copied",
+  "json_export",
+  "print_opened",
+];
+const statEvents = new Set(STAT_EVENTS);
+let statsQueue = Promise.resolve();
 
 const contentTypes = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -23,9 +36,15 @@ const contentTypes = new Map([
 createServer(async (request, response) => {
   try {
     const method = request.method ?? "GET";
-    if (method !== "GET" && method !== "HEAD") return methodNotAllowed(response);
-
     const url = new URL(request.url, `http://${request.headers.host}`);
+    if (method !== "GET" && method !== "HEAD" && method !== "POST") return methodNotAllowed(response, "GET, HEAD, POST");
+    if (url.pathname === "/api/stats/event") {
+      if (method !== "POST") return methodNotAllowed(response, "POST");
+      return recordStatEvent(request, response);
+    }
+    if (method === "POST") return methodNotAllowed(response);
+
+    if (url.pathname === "/api/stats") return sendJson(response, await readPublicStats());
     if (url.pathname === "/api/samples") return sendJson(response, await listSamples());
     if (url.pathname === "/api/sample") return sendSample(response, url.searchParams.get("file") ?? "");
 
@@ -75,6 +94,99 @@ function samplePath(name) {
   return sample?.filePath ?? "";
 }
 
+async function recordStatEvent(request, response) {
+  let body;
+  try {
+    body = await readRequestBody(request, 1024);
+  } catch {
+    response.writeHead(413, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Stats event is too large");
+    return;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(body || "{}");
+  } catch {
+    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Invalid stats event");
+    return;
+  }
+
+  const eventName = typeof payload.event === "string" ? payload.event : "";
+  if (!statEvents.has(eventName)) {
+    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Unknown stats event");
+    return;
+  }
+
+  await incrementStat(eventName);
+  response.writeHead(204, { "Cache-Control": "no-store" });
+  response.end();
+}
+
+async function readRequestBody(request, maxBytes) {
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk;
+    if (Buffer.byteLength(body, "utf8") > maxBytes) {
+      throw new Error("Request too large");
+    }
+  }
+  return body;
+}
+
+async function readPublicStats() {
+  return publicStats(await loadStats());
+}
+
+async function incrementStat(eventName) {
+  const work = statsQueue.then(async () => {
+    const stats = await loadStats();
+    stats.totals[eventName] = (stats.totals[eventName] ?? 0) + 1;
+    stats.updatedAt = new Date().toISOString();
+    await mkdir(path.dirname(statsPath), { recursive: true });
+    await writeFile(statsPath, `${JSON.stringify(stats, null, 2)}\n`);
+  });
+  statsQueue = work.catch(() => {});
+  return work;
+}
+
+async function loadStats() {
+  try {
+    return normalizeStats(JSON.parse(await readFile(statsPath, "utf8")));
+  } catch (error) {
+    if (error.code === "ENOENT" || error instanceof SyntaxError) return defaultStats();
+    throw error;
+  }
+}
+
+function normalizeStats(value = {}) {
+  const stats = {
+    startedAt: typeof value.startedAt === "string" ? value.startedAt : new Date().toISOString(),
+    updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : "",
+    totals: {},
+  };
+  for (const eventName of STAT_EVENTS) {
+    const count = Number(value.totals?.[eventName] ?? 0);
+    stats.totals[eventName] = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  }
+  return stats;
+}
+
+function defaultStats() {
+  return normalizeStats({ startedAt: new Date().toISOString(), updatedAt: "" });
+}
+
+function publicStats(stats) {
+  return {
+    generatedAt: new Date().toISOString(),
+    startedAt: stats.startedAt,
+    updatedAt: stats.updatedAt || stats.startedAt,
+    totals: stats.totals,
+  };
+}
+
 function routeStaticPath(pathname) {
   const normalized = routeAlias(pathname);
   const candidate = path.resolve(root, `.${decodeURIComponent(normalized)}`);
@@ -86,6 +198,7 @@ function routeStaticPath(pathname) {
 
   const allowed = candidate === path.join(root, "index.html")
     || candidate === path.join(root, "privacy.html")
+    || candidate === path.join(root, "stats.html")
     || candidate.startsWith(path.join(root, "src") + path.sep);
   if (!allowed) {
     const error = new Error("Static path not allowed");
@@ -99,6 +212,7 @@ function routeStaticPath(pathname) {
 function routeAlias(pathname) {
   if (pathname === "/") return "/index.html";
   if (pathname === "/privacy") return "/privacy.html";
+  if (pathname === "/stats") return "/stats.html";
   return pathname;
 }
 
@@ -107,9 +221,9 @@ function sendJson(response, value) {
   response.end(JSON.stringify(value));
 }
 
-function methodNotAllowed(response) {
+function methodNotAllowed(response, allow = "GET, HEAD") {
   response.writeHead(405, {
-    "Allow": "GET, HEAD",
+    "Allow": allow,
     "Content-Type": "text/plain; charset=utf-8",
   });
   response.end("Method not allowed");

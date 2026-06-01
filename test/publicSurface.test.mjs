@@ -10,18 +10,20 @@ test("commits exactly one public example for QLThumbnail", async () => {
   assert.deepEqual(examples, ["qlthumbnail.ips"]);
 });
 
-test("page exposes privacy policy, repository link, and clear-report control", async () => {
+test("page exposes privacy policy, stats, repository link, and clear-report control", async () => {
   const html = await readProjectFile("index.html");
 
   assert.match(html, /href="\/privacy"/);
+  assert.match(html, /href="\/stats"/);
   assert.match(html, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
   assert.match(html, /id="clearReport"/);
 });
 
-test("privacy copy distinguishes local file input from server upload routes", async () => {
-  const [index, privacy, messages, readme] = await Promise.all([
+test("privacy copy distinguishes local file input from server upload routes and aggregate stats", async () => {
+  const [index, privacy, stats, messages, readme] = await Promise.all([
     readProjectFile("index.html"),
     readProjectFile("privacy.html"),
+    readProjectFile("stats.html"),
     readProjectFile("src/i18n/en.js"),
     readProjectFile("README.md"),
   ]);
@@ -29,6 +31,9 @@ test("privacy copy distinguishes local file input from server upload routes", as
   assert.match(index, />Open \.ips \/ \.crash</);
   assert.match(privacy, /local browser inputs, not a network upload/);
   assert.match(messages, /has no route that receives crash report files/);
+  assert.match(`${privacy}\n${messages}`, /non-identifiable aggregate stats/);
+  assert.match(`${privacy}\n${messages}`, /does not store IP addresses, user agents, file names, report contents, stack traces, or identifiers/);
+  assert.match(stats, /data-i18n="stats.title"/);
   assert.match(readme, /they are not network uploads/);
   assert.doesNotMatch(`${privacy}\n${messages}\n${readme}`, /upload endpoint|uploaded reports|upload control/i);
 });
@@ -53,9 +58,34 @@ test("project links stay in the sidebar instead of the report action bar", async
   const actionBar = html.match(/<div class="actions">[\s\S]*?<\/div>/)?.[0] ?? "";
 
   assert.match(projectLinks, /href="\/privacy"/);
+  assert.match(projectLinks, /href="\/stats"/);
   assert.match(projectLinks, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
+  assert.match(projectLinks, /class="external-link"[^>]*target="_blank"/);
   assert.doesNotMatch(actionBar, /href="\/privacy"/);
+  assert.doesNotMatch(actionBar, /href="\/stats"/);
   assert.doesNotMatch(actionBar, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
+});
+
+test("stats page exposes public aggregate analytics", async () => {
+  const [statsHtml, statsJs, messages] = await Promise.all([
+    readProjectFile("stats.html"),
+    readProjectFile("src/stats.js"),
+    readProjectFile("src/i18n/en.js"),
+  ]);
+
+  assert.match(statsHtml, /id="statsGrid"/);
+  assert.match(statsHtml, /aria-live="polite"/);
+  assert.match(statsHtml, /type="module" src="\/src\/stats.js"/);
+  assert.match(statsJs, /fetch\("\/api\/stats"\)/);
+  assert.match(statsJs, /class="stat-card-head"/);
+  assert.match(statsJs, /class="stat-card-icon"/);
+  assert.match(statsJs, /data-event="\$\{escapeAttr\(eventName\)\}"/);
+  assert.match(statsJs, /page_view/);
+  assert.match(statsJs, /report_analyzed/);
+  assert.match(statsJs, /browser_report_analyzed/);
+  assert.match(statsJs, /sample_report_analyzed/);
+  assert.match(statsJs, /parse_error/);
+  assert.match(messages, /stats:\s*{/);
 });
 
 test("sidebar and theme controls stay fixed at their natural screen edges", async () => {
@@ -113,9 +143,10 @@ test("copy summary action is neutral until the user acts on it", async () => {
 });
 
 test("summary exposes crash story, collection context, and symbolication readiness", async () => {
-  const [app, parser, messages] = await Promise.all([
+  const [app, parser, css, messages] = await Promise.all([
     readProjectFile("src/app.js"),
     readProjectFile("src/crashParser.js"),
+    readProjectFile("src/styles.css"),
     readProjectFile("src/i18n/en.js"),
   ]);
 
@@ -125,6 +156,9 @@ test("summary exposes crash story, collection context, and symbolication readine
   assert.match(app, /renderReferenceLink/);
   assert.match(app, /target="_blank"/);
   assert.match(app, /rel="noopener noreferrer"/);
+  assert.match(app, /class="reference-link external-link"/);
+  assert.match(css, /\.external-link\[target="_blank"\]::after/);
+  assert.match(css, /content:\s*"\\2197"/);
   assert.match(parser, /referenceUrl/);
   assert.match(parser, /developer\.apple\.com\/documentation\/xcode\/acquiring-crash-reports-and-diagnostic-logs/);
   assert.match(parser, /developer\.apple\.com\/documentation\/metrickit/);
@@ -161,11 +195,39 @@ test("browser app does not use persistent storage APIs for chosen reports", asyn
   assert.match(app, /analysis = null/);
 });
 
-test("server rejects write methods and restricts samples to examples", async () => {
+test("server restricts report routes while allowing stats-only POSTs", async () => {
   const server = await readProjectFile("scripts/server.js");
 
-  assert.doesNotMatch(server, /multipart|formData|createWriteStream|appendFile|writeFile/);
-  assert.match(server, /method !== "GET"/);
+  assert.doesNotMatch(server, /multipart|formData|createWriteStream|appendFile/);
+  assert.match(server, /url\.pathname === "\/api\/stats"/);
+  assert.match(server, /url\.pathname === "\/api\/stats\/event"/);
+  assert.match(server, /method !== "GET" && method !== "HEAD" && method !== "POST"/);
+  assert.match(server, /STAT_EVENTS/);
+  assert.match(server, /CRASHPAD_STATS_PATH/);
   assert.match(server, /examples\/qlthumbnail\.ips/);
   assert.doesNotMatch(server, /readdir\(root\).*isReportFile/s);
+});
+
+test("browser sends only fixed analytics event names", async () => {
+  const [app, page, stats] = await Promise.all([
+    readProjectFile("src/app.js"),
+    readProjectFile("src/i18n/page.js"),
+    readProjectFile("src/stats.js"),
+  ]);
+
+  assert.match(app, /trackStatEvent\("page_view"\)/);
+  assert.match(app, /trackStatEvent\("report_analyzed"\)/);
+  assert.match(app, /trackStatEvent\("browser_report_analyzed"\)/);
+  assert.match(app, /trackStatEvent\("sample_report_analyzed"\)/);
+  assert.match(app, /trackStatEvent\("parse_error"\)/);
+  assert.match(app, /trackStatEvent\("summary_copied"\)/);
+  assert.match(app, /trackStatEvent\("json_export"\)/);
+  assert.match(app, /trackStatEvent\("print_opened"\)/);
+  assert.match(app, /body: JSON\.stringify\(\{ event: eventName \}\)/);
+  assert.match(page, /trackStatEvent\("page_view"\)/);
+  assert.match(stats, /trackStatEvent\("page_view"\)/);
+  assert.match(page, /body: JSON\.stringify\(\{ event: eventName \}\)/);
+  assert.match(stats, /body: JSON\.stringify\(\{ event: eventName \}\)/);
+  assert.doesNotMatch(app, /trackStatEvent\([^)]*fileName|trackStatEvent\([^)]*analysis|trackStatEvent\([^)]*parsed/s);
+  assert.doesNotMatch(`${page}\n${stats}`, /trackStatEvent\([^)]*location|trackStatEvent\([^)]*document|trackStatEvent\([^)]*navigator/s);
 });
