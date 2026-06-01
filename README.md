@@ -14,7 +14,7 @@ The analyzer is based on Apple's crash report documentation:
 
 - Open or drag in `.ips` and `.crash` reports.
 - Keep chosen reports ephemeral: parsing happens in the browser tab, no report file is posted to the server, and Forget Report clears in-memory report data.
-- Record public, privacy-preserving aggregate stats for visits, analyses, parse failures, and local actions without storing report contents or identifiers.
+- Record public, privacy-preserving aggregate stats for visits, analyses, parse failures, local actions, and real daily buckets without storing report contents or identifiers.
 - Parse Apple's two-object IPS JSON format and reject non-crash IPS logs.
 - Render summary, environment, exception and termination fields, diagnostics, crashed thread frames, binary images, and raw JSON.
 - Explain likely root cause using documented clues such as Last Exception Backtrace, VM Region Info, exception notes, triggered thread, and thread-state registers.
@@ -50,7 +50,7 @@ Crash reports can contain device models, OS builds, process paths, bundle identi
 
 The browser file-open flow does not transmit report file contents to the server. The file picker and drop target read the report with browser JavaScript in the current tab; they are not network uploads. The report is retained in page memory until the user clicks Forget Report, reloads the page, or closes the tab. Export JSON and Copy Summary are local browser actions initiated by the user.
 
-The hosted page includes `/privacy`, which states the same policy in user-facing language. CrashPad also exposes `/stats`, a public page backed by aggregate counters for visits, reports analyzed, example versus browser-local analyses, parse failures, and user-triggered print/export/copy actions. Those counters do not store IP addresses, user agents, file names, report contents, stack traces, or identifiers.
+The hosted page includes `/privacy`, which states the same policy in user-facing language. CrashPad also exposes `/stats`, a public page backed by aggregate counters and daily aggregate buckets for visits, reports analyzed, example versus browser-local analyses, parse failures, and user-triggered print/export/copy actions. Those counters do not store IP addresses, user agents, file names, report contents, stack traces, or identifiers.
 
 Before making a fork or deployment public, review any added fixtures and generated artifacts for private paths, identifiers, proprietary symbols, or user data.
 

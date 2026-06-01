@@ -83,7 +83,7 @@ export const messages = {
     storageTitle: "What The Server Stores",
     storageBody: "The server hosts the static app, read-only sample routes for the public QLThumbnail example report, and aggregate stats routes. It has no route that receives crash report files and never writes chosen reports to disk.",
     analyticsTitle: "Aggregate Stats",
-    analyticsBody: "CrashPad records non-identifiable aggregate stats such as visits, reports analyzed, example versus browser-local analyses, parse failures, and user-triggered print, export, and copy actions. The stats store is public counters only and does not store IP addresses, user agents, file names, report contents, stack traces, or identifiers.",
+    analyticsBody: "CrashPad records non-identifiable aggregate stats such as visits, reports analyzed, example versus browser-local analyses, parse failures, user-triggered print, export, and copy actions, and daily aggregate buckets. The stats store is public aggregate data only and does not store IP addresses, user agents, file names, report contents, stack traces, or identifiers.",
     ephemeralTitle: "Ephemeral Controls",
     ephemeralBodyHtml: "Click <strong>Forget Report</strong>, reload the page, or close the tab to clear the current report from browser memory. Export JSON and Copy Summary are local browser actions you initiate.",
     logsTitle: "Operational Logs",
@@ -104,7 +104,8 @@ export const messages = {
     lastUpdated: "Last updated {timestamp}",
     notRecorded: "No events recorded yet.",
     successRate: "Analysis Success Rate",
-    localActions: "Local Actions",
+    sparklineLabel: "over the last 7 days",
+    peak: "{value} peak",
     eventDescriptions: {
       page_view: "Analyzer page visits.",
       report_analyzed: "Reports successfully parsed and rendered.",
@@ -128,17 +129,10 @@ export const messages = {
       print_opened: "Print Opens",
     },
     charts: {
-      activityMix: {
-        title: "Activity Mix",
-        description: "Visits, successful analyses, parse failures, and browser-only follow-up actions.",
-      },
-      analysisOutcome: {
-        title: "Analysis Outcome",
-        description: "Successful parses compared with reports that could not be parsed.",
-      },
-      sourceMix: {
-        title: "Analysis Source",
-        description: "Public example analyses compared with browser-local file analyses.",
+      dailyActivity: {
+        title: "Daily Activity",
+        description: "Last 7 days of real aggregate visits, successful analyses, and parse failures.",
+        ariaLabel: "Last 7 days of visits, crashes analyzed, and parse failures",
       },
     },
   },

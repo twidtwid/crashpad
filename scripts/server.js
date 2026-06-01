@@ -143,7 +143,10 @@ async function readPublicStats() {
 async function incrementStat(eventName) {
   const work = statsQueue.then(async () => {
     const stats = await loadStats();
+    const day = todayKey();
     stats.totals[eventName] = (stats.totals[eventName] ?? 0) + 1;
+    stats.daily[day] = stats.daily[day] ?? emptyTotals();
+    stats.daily[day][eventName] = (stats.daily[day][eventName] ?? 0) + 1;
     stats.updatedAt = new Date().toISOString();
     await mkdir(path.dirname(statsPath), { recursive: true });
     await writeFile(statsPath, `${JSON.stringify(stats, null, 2)}\n`);
@@ -166,6 +169,7 @@ function normalizeStats(value = {}) {
     startedAt: typeof value.startedAt === "string" ? value.startedAt : new Date().toISOString(),
     updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : "",
     totals: {},
+    daily: normalizeDaily(value.daily),
   };
   for (const eventName of STAT_EVENTS) {
     const count = Number(value.totals?.[eventName] ?? 0);
@@ -184,7 +188,43 @@ function publicStats(stats) {
     startedAt: stats.startedAt,
     updatedAt: stats.updatedAt || stats.startedAt,
     totals: stats.totals,
+    daily: dailyRows(stats.daily),
   };
+}
+
+function normalizeDaily(value = {}) {
+  const entries = Array.isArray(value)
+    ? value.map((row) => [row.date, row.totals])
+    : Object.entries(value);
+  const daily = {};
+  for (const [date, totals] of entries) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) continue;
+    daily[date] = normalizeTotals(totals);
+  }
+  return daily;
+}
+
+function normalizeTotals(value = {}) {
+  const totals = emptyTotals();
+  for (const eventName of STAT_EVENTS) {
+    const count = Number(value?.[eventName] ?? 0);
+    totals[eventName] = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+  }
+  return totals;
+}
+
+function emptyTotals() {
+  return Object.fromEntries(STAT_EVENTS.map((eventName) => [eventName, 0]));
+}
+
+function dailyRows(daily = {}) {
+  return Object.entries(daily)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, totals]) => ({ date, totals }));
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function routeStaticPath(pathname) {

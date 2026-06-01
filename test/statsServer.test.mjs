@@ -52,6 +52,12 @@ test("stats API records only public aggregate counters", async (t) => {
   assert.match(stats.startedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.match(stats.updatedAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.match(stats.generatedAt, /^\d{4}-\d{2}-\d{2}T/);
+  const today = new Date().toISOString().slice(0, 10);
+  const todayStats = stats.daily.find((row) => row.date === today);
+  assert.equal(todayStats.totals.page_view, 1);
+  assert.equal(todayStats.totals.browser_report_analyzed, 1);
+  assert.equal(todayStats.totals.report_analyzed, 1);
+  assert.equal(todayStats.totals.parse_error, 1);
 
   const rawStatsFile = await readFile(statsPath, "utf8");
   assert.doesNotMatch(rawStatsFile, /SecretCustomerCrash|do not persist|userAgent|contents/i);
