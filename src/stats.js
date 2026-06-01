@@ -11,6 +11,10 @@ const EVENT_KEYS = [
   "json_export",
   "print_opened",
 ];
+// Events still tracked and summed, but not given their own card. The example
+// (sample_report_analyzed) total is folded into report_analyzed, so showing it
+// as a peer card double-counts; dropping it also keeps an even eight cards.
+const CARD_EVENT_KEYS = EVENT_KEYS.filter((eventName) => eventName !== "sample_report_analyzed");
 const CHART_DAYS = 7;
 const TREND_MIN_DAYS = 2;
 const DEFAULT_WINDOW = "7d";
@@ -54,7 +58,7 @@ function renderStats(stats) {
   const dailySeries = buildDailySeries(stats?.daily ?? [], stats?.startedAt, windowDays(windowKey));
   const totals = sumTotals(dailySeries);
   const trendReady = hasTrendData(dailySeries);
-  const cards = EVENT_KEYS.map((eventName) => statCard(
+  const cards = CARD_EVENT_KEYS.map((eventName) => statCard(
     eventName,
     t(`stats.events.${eventName}`),
     formatNumber(totals[eventName]),
@@ -110,37 +114,68 @@ function renderCharts(dailySeries) {
 }
 
 function renderNotEnoughHistory(dailySeries) {
+  // Day one: the per-event totals already live in the cards above, so restating
+  // them here is pure duplication. Show a designed empty state instead and let
+  // the chart unlock once a second day gives the trend lines something to draw.
   const latest = dailySeries.findLast((row) => row.hasData) ?? dailySeries.at(-1);
-  const latestTotals = latest?.totals ?? {};
   return `
     <article class="daily-chart-card daily-chart-card--empty">
-      <div class="stats-chart-head">
+      <div class="chart-empty">
+        <span class="chart-empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M4 5v14h16"></path>
+            <path d="m7 14 3-3 3 2 4-5"></path>
+          </svg>
+        </span>
         <h3>${escapeHtml(t("stats.charts.dailyActivity.title"))}</h3>
         <p>${escapeHtml(t("stats.charts.dailyActivity.notEnoughHistory", { date: latest?.label ?? "" }))}</p>
-      </div>
-      <div class="daily-summary-grid" role="list" aria-label="${escapeAttr(t("stats.charts.dailyActivity.todayLabel"))}">
-        ${summaryMetric("accent", t("stats.events.page_view"), latestTotals.page_view)}
-        ${summaryMetric("success", t("stats.events.report_analyzed"), latestTotals.report_analyzed)}
-        ${summaryMetric("danger", t("stats.events.parse_error"), latestTotals.parse_error)}
       </div>
     </article>
   `;
 }
 
+const CHART_SERIES = [
+  { key: "page_view", tone: "accent" },
+  { key: "report_analyzed", tone: "success" },
+  { key: "parse_error", tone: "danger" },
+];
+
 function renderDailyChart(dailySeries) {
-  const visits = seriesValues(dailySeries, "page_view");
-  const analyzed = seriesValues(dailySeries, "report_analyzed");
-  const failures = seriesValues(dailySeries, "parse_error");
-  const width = 720;
-  const height = 250;
-  const padding = 24;
-  const max = maxSeriesValue(visits, analyzed, failures);
-  const visitPoints = linePoints(visits, width, height, padding, max);
-  const analyzedPoints = linePoints(analyzed, width, height, padding, max);
-  const failurePoints = linePoints(failures, width, height, padding, max);
-  const startDate = dailySeries[0]?.label ?? "";
-  const endDate = dailySeries.at(-1)?.label ?? "";
-  const axis = axisLabels(startDate, endDate);
+  const valuesByKey = Object.fromEntries(
+    CHART_SERIES.map((series) => [series.key, seriesValues(dailySeries, series.key)]),
+  );
+  const dataMax = maxValue(CHART_SERIES.flatMap((series) => valuesByKey[series.key]));
+  const ticks = yTicks(dataMax, 4);
+  const xTickIndexes = axisTickIndexes(dailySeries.length);
+
+  // Plot is drawn in a normalized 0..100 box and stretched to fill its column;
+  // non-scaling strokes keep line weight uniform, and axis labels live in HTML
+  // so they stay crisp and correctly sized at every viewport width.
+  const gridlines = ticks.values
+    .map((value) => {
+      const y = roundPoint(100 - (value / ticks.max) * 100);
+      return `<path class="chart-gridline${value === 0 ? " chart-gridline--base" : ""}" vector-effect="non-scaling-stroke" d="M 0 ${y} H 100"></path>`;
+    })
+    .join("");
+  const lines = CHART_SERIES
+    .map((series) => {
+      const points = plotPoints(valuesByKey[series.key], ticks.max);
+      return `<path class="daily-line ${series.tone}" vector-effect="non-scaling-stroke" d="${escapeAttr(linePath(points))}"></path>`;
+    })
+    .join("");
+  const yLabels = ticks.values
+    .map((value) => {
+      const top = roundPoint((1 - value / ticks.max) * 100);
+      return `<span style="top:${top}%">${escapeHtml(formatNumber(value))}</span>`;
+    })
+    .join("");
+  const count = dailySeries.length;
+  const xLabels = xTickIndexes
+    .map((index) => {
+      const left = count <= 1 ? 50 : roundPoint((index / (count - 1)) * 100);
+      return `<span style="left:${left}%">${escapeHtml(dailySeries[index]?.label ?? "")}</span>`;
+    })
+    .join("");
 
   return `
     <article class="daily-chart-card">
@@ -149,24 +184,70 @@ function renderDailyChart(dailySeries) {
         <p>${escapeHtml(t("stats.charts.dailyActivity.description"))}</p>
       </div>
       <div class="chart-legend chart-legend--top">
-        ${legendItem("accent", t("stats.events.page_view"), maxValue(visits))}
-        ${legendItem("success", t("stats.events.report_analyzed"), maxValue(analyzed))}
-        ${legendItem("danger", t("stats.events.parse_error"), maxValue(failures))}
+        ${CHART_SERIES.map((series) => legendItem(
+          series.tone,
+          t(`stats.events.${series.key}`),
+          latestValue(valuesByKey[series.key]),
+          maxValue(valuesByKey[series.key]),
+        )).join("")}
       </div>
-      <svg class="daily-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeAttr(t("stats.charts.dailyActivity.ariaLabel"))}" preserveAspectRatio="none">
-        <path class="chart-gridline" d="M ${padding} ${padding} H ${width - padding}"></path>
-        <path class="chart-gridline" d="M ${padding} ${height / 2} H ${width - padding}"></path>
-        <path class="chart-gridline" d="M ${padding} ${height - padding} H ${width - padding}"></path>
-        <path class="daily-area accent" d="${escapeAttr(areaPath(visitPoints, height, padding))}"></path>
-        <path class="daily-line accent" d="${escapeAttr(linePath(visitPoints))}"></path>
-        <path class="daily-line success" d="${escapeAttr(linePath(analyzedPoints))}"></path>
-        <path class="daily-line danger" d="${escapeAttr(linePath(failurePoints))}"></path>
-      </svg>
-      <div class="daily-axis" aria-hidden="true">
-        ${axis.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
+      <div class="daily-chart-frame">
+        <div class="chart-y-axis" aria-hidden="true">${yLabels}</div>
+        <div class="chart-plot">
+          <svg class="daily-chart" viewBox="0 0 100 100" role="img" aria-label="${escapeAttr(t("stats.charts.dailyActivity.ariaLabel"))}" preserveAspectRatio="none">
+            ${gridlines}
+            ${lines}
+          </svg>
+        </div>
+        <div class="chart-x-axis" aria-hidden="true">${xLabels}</div>
       </div>
     </article>
   `;
+}
+
+function plotPoints(values, max) {
+  const count = values.length;
+  return values.map((value, index) => {
+    if (value === null || value === undefined) return null;
+    const x = count <= 1 ? 50 : (index / (count - 1)) * 100;
+    const y = 100 - (numberValue(value) / max) * 100;
+    return [roundPoint(x), roundPoint(y)];
+  });
+}
+
+function yTicks(dataMax, count = 4) {
+  const step = niceStep(Math.max(1, dataMax) / count);
+  const max = step * count;
+  const values = Array.from({ length: count + 1 }, (_, index) => index * step);
+  return { max, step, values };
+}
+
+function niceStep(value) {
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  const normalized = value / magnitude;
+  // 2.5 is only allowed once the magnitude keeps ticks integer (>= 10), so small
+  // count axes never show fractional labels like "2.5 visits".
+  let niceNormalized;
+  if (normalized <= 1) niceNormalized = 1;
+  else if (normalized <= 2) niceNormalized = 2;
+  else if (normalized <= 2.5 && magnitude >= 10) niceNormalized = 2.5;
+  else if (normalized <= 5) niceNormalized = 5;
+  else niceNormalized = 10;
+  return niceNormalized * magnitude;
+}
+
+function axisTickIndexes(count) {
+  if (count <= 1) return [0];
+  if (count <= 4) return Array.from({ length: count }, (_, index) => index);
+  const ticks = 4;
+  return Array.from({ length: ticks }, (_, index) => Math.round((index * (count - 1)) / (ticks - 1)));
+}
+
+function latestValue(values) {
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    if (values[index] !== null && values[index] !== undefined) return numberValue(values[index]);
+  }
+  return 0;
 }
 
 function statCard(eventName, label, value, subtitle, trend) {
@@ -315,22 +396,19 @@ function smoothSegmentPath(points) {
   return commands.join(" ");
 }
 
-function legendItem(tone, label, peak) {
+function legendItem(tone, label, latest, peak) {
+  // Peak is only worth showing when it differs from the latest value; otherwise
+  // "75  75 peak" reads as a duplicated typo.
+  const peakNote = peak > latest
+    ? `<span class="chart-legend-peak">${escapeHtml(t("stats.peak", { value: formatNumber(peak) }))}</span>`
+    : "";
   return `
     <span class="chart-legend-item">
       <span class="chart-legend-dot ${escapeAttr(tone)}" aria-hidden="true"></span>
-      ${escapeHtml(label)}
-      <span class="chart-legend-value">${escapeHtml(t("stats.peak", { value: formatNumber(peak) }))}</span>
+      <span class="chart-legend-name">${escapeHtml(label)}</span>
+      <span class="chart-legend-value">${escapeHtml(formatNumber(latest))}</span>
+      ${peakNote}
     </span>
-  `;
-}
-
-function summaryMetric(tone, label, value) {
-  return `
-    <div class="daily-summary-metric ${escapeAttr(tone)}" role="listitem">
-      <span>${escapeHtml(label)}</span>
-      <strong>${escapeHtml(formatNumber(value))}</strong>
-    </div>
   `;
 }
 
@@ -374,11 +452,6 @@ function dateKey(value) {
 
 function maxDateKey(left, right) {
   return left > right ? left : right;
-}
-
-function axisLabels(startDate, endDate) {
-  if (!startDate) return [];
-  return startDate === endDate ? [startDate] : [startDate, endDate];
 }
 
 function shortDate(date) {

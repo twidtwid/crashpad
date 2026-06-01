@@ -99,7 +99,8 @@ test("stats page exposes public aggregate analytics", async () => {
   assert.match(statsJs, /class="sparkline-area/);
   assert.match(statsJs, /class="daily-chart"/);
   assert.match(statsJs, /class="daily-chart-card"/);
-  assert.match(statsJs, /class="daily-summary-grid"/);
+  assert.match(statsJs, /class="chart-y-axis"/);
+  assert.match(statsJs, /class="chart-empty"/);
   assert.match(statsJs, /class="chart-legend chart-legend--top"/);
   assert.match(statsJs, /role="img"/);
   assert.doesNotMatch(statsJs, /class="bar-chart"|class="bar-row"|class="bar-track"/);

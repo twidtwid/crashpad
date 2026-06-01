@@ -1,6 +1,6 @@
 {
   "name": "crashpad",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "A local Apple crash report parser and root-cause analysis harness.",
   "private": true,
   "license": "MIT",
