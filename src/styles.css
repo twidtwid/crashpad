@@ -16,6 +16,7 @@
   --danger-soft: #fae6e3;
   --success: #19713a;
   --success-soft: #e7f3ea;
+  --report-gutter: clamp(14px, 2vw, 24px);
   --font-serif: "Charter", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -431,7 +432,7 @@ button {
 .panel {
   background: rgba(255, 254, 250, 0.8);
   border-top: 1px solid var(--rule-strong);
-  padding-top: 12px;
+  padding: 12px var(--report-gutter) 0;
 }
 
 .root-guide {
@@ -442,6 +443,7 @@ button {
 .root-guide h4 {
   margin: 0;
   font: 700 1.15rem/1.25 var(--font-serif);
+  overflow-wrap: anywhere;
 }
 
 .root-guide p {
@@ -491,13 +493,17 @@ button {
   display: grid;
   gap: 10px;
   border-top: 2px solid var(--danger);
-  padding: 14px 0 0;
+  padding: 14px var(--report-gutter) 0;
 }
 
 .verdict-head {
   display: flex;
   gap: 12px;
   align-items: start;
+}
+
+.verdict-head > div {
+  min-width: 0;
 }
 
 .signal {
@@ -515,6 +521,7 @@ button {
 .verdict h3 {
   margin: 0 0 4px;
   font: 700 1.4rem/1.15 var(--font-serif);
+  overflow-wrap: anywhere;
 }
 
 .verdict p {
@@ -535,15 +542,20 @@ button {
   align-items: center;
   gap: 6px;
   width: fit-content;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid var(--rule);
   border-radius: 999px;
   padding: 4px 8px;
   color: var(--muted);
   background: var(--surface);
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .status-pill::before {
   content: "";
+  flex: 0 0 auto;
   width: 7px;
   height: 7px;
   border-radius: 99px;
@@ -585,8 +597,12 @@ button {
 
 .section {
   border-top: 1px solid var(--rule-strong);
-  padding-top: 14px;
+  padding: 14px var(--report-gutter) 0;
   min-width: 0;
+}
+
+.section-title {
+  overflow-wrap: anywhere;
 }
 
 .section-header {
@@ -605,7 +621,7 @@ button {
 
 .table-wrap {
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: visible;
   border: 1px solid var(--rule);
   background: var(--surface);
 }
@@ -613,7 +629,7 @@ button {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: min(760px, 100vw - 32px);
+  min-width: 100%;
   table-layout: fixed;
   font-variant-numeric: tabular-nums;
 }
@@ -634,6 +650,7 @@ td {
 th {
   color: var(--muted);
   background: var(--surface-2);
+  overflow-wrap: anywhere;
 }
 
 tr:last-child td {
