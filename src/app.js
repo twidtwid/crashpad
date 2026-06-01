@@ -1,4 +1,6 @@
 import { analyzeCrashReport, parseCrashReport } from "./crashParser.js";
+import { applyStaticTranslations } from "./i18n/dom.js";
+import { t } from "./i18n/en.js";
 
 const state = {
   samples: [],
@@ -35,6 +37,7 @@ const els = {
 init();
 
 async function init() {
+  applyStaticTranslations();
   wireEvents();
   await loadSamples();
   if (state.samples.length) {
@@ -89,8 +92,10 @@ function wireEvents() {
 
   els.tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      state.activeTab = tab.dataset.tab;
-      renderReport();
+      activateTab(tab.dataset.tab);
+    });
+    tab.addEventListener("keydown", (event) => {
+      handleTabKeydown(event, tab);
     });
   });
 
@@ -100,6 +105,36 @@ function wireEvents() {
   els.focusToggle.addEventListener("click", () => {
     els.body.classList.toggle("focus-mode");
   });
+}
+
+function activateTab(tabName, { focus = false } = {}) {
+  state.activeTab = tabName;
+  if (state.analysis) {
+    renderReport();
+  } else {
+    syncTabs();
+  }
+  if (focus) {
+    const activeTab = [...els.tabs].find((tab) => tab.dataset.tab === tabName);
+    activeTab?.focus();
+  }
+}
+
+function handleTabKeydown(event, activeTab) {
+  const tabs = [...els.tabs];
+  const index = tabs.indexOf(activeTab);
+  if (index < 0) return;
+
+  const keys = {
+    ArrowLeft: (index - 1 + tabs.length) % tabs.length,
+    ArrowRight: (index + 1) % tabs.length,
+    Home: 0,
+    End: tabs.length - 1,
+  };
+
+  if (!(event.key in keys)) return;
+  event.preventDefault();
+  activateTab(tabs[keys[event.key]].dataset.tab, { focus: true });
 }
 
 async function loadSamples() {
@@ -115,12 +150,12 @@ async function loadSamples() {
 
 function renderSamples() {
   if (!state.samples.length) {
-    els.sampleList.innerHTML = `<p class="muted">No public example found.</p>`;
+    els.sampleList.innerHTML = `<p class="muted">${escapeHtml(t("samples.empty"))}</p>`;
     return;
   }
 
   els.sampleList.innerHTML = state.samples.map((sample) => `
-    <button class="sample-button ${sample.name === state.activeSample ? "is-active" : ""}" type="button" data-file="${escapeAttr(sample.name)}">
+    <button class="sample-button ${sample.name === state.activeSample ? "is-active" : ""}" type="button" data-file="${escapeAttr(sample.name)}" aria-current="${sample.name === state.activeSample ? "true" : "false"}">
       <span class="sample-name">${highlight(sample.name)}</span>
       <span class="sample-meta">${formatBytes(sample.size)} · ${escapeHtml(sample.modified)}</span>
     </button>
@@ -190,31 +225,33 @@ function render() {
   els.copySummary.disabled = !hasReport;
   els.downloadJson.disabled = !hasReport;
   els.clearReport.disabled = !hasReport && !hasError;
+  syncTabs();
 
   if (hasError) {
-    els.reportTitle.textContent = "Could not parse report";
+    els.reportTitle.textContent = t("error.parseTitle");
     els.statusBox.className = "status-box error";
     els.statusBox.textContent = state.error.message;
     els.errorState.innerHTML = `
-      <h2>Unsupported or invalid crash report.</h2>
+      <h2>${escapeHtml(t("error.title"))}</h2>
       <p>${escapeHtml(state.error.message)}</p>
     `;
     return;
   }
 
   if (!hasReport) {
-    els.reportTitle.textContent = "No report loaded";
+    els.reportTitle.textContent = t("app.noReportLoaded");
     els.statusBox.className = "status-box";
-    els.statusBox.textContent = "Waiting for a crash report.";
+    els.statusBox.textContent = t("status.waiting");
     return;
   }
 
   const { analysis } = state;
-  els.reportTitle.textContent = `${analysis.identity.process || "Crash Report"}${analysis.fileName ? ` · ${analysis.fileName}` : ""}`;
+  const processName = analysis.identity.process || t("app.fallbackReportTitle");
+  els.reportTitle.textContent = `${analysis.identity.process || t("app.fallbackReportTitle")}${analysis.fileName ? ` · ${analysis.fileName}` : ""}`;
   els.statusBox.className = "status-box ok";
   els.statusBox.textContent = state.source === "upload"
-    ? `${analysis.identity.process} parsed locally. Nothing was uploaded or stored; Forget Report clears it from this tab.`
-    : `${analysis.identity.process} example parsed successfully. ${analysis.crashedThread.frames.length} crashed-thread frames.`;
+    ? t("status.uploadParsed", { process: processName })
+    : t("status.sampleParsed", { process: processName, frameCount: analysis.crashedThread.frames.length });
   renderReport();
 }
 
@@ -236,10 +273,8 @@ function clearReport() {
 
 function renderReport() {
   if (!state.analysis) return;
-
-  els.tabs.forEach((tab) => {
-    tab.classList.toggle("is-active", tab.dataset.tab === state.activeTab);
-  });
+  els.reportView.setAttribute("aria-busy", "true");
+  syncTabs();
 
   if (state.activeTab === "threads") {
     els.reportView.innerHTML = renderThreads();
@@ -250,14 +285,25 @@ function renderReport() {
   } else {
     els.reportView.innerHTML = renderSummary();
   }
+  els.reportView.setAttribute("aria-busy", "false");
+}
+
+function syncTabs() {
+  els.tabs.forEach((tab) => {
+    const isActive = tab.dataset.tab === state.activeTab;
+    tab.classList.toggle("is-active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+    tab.tabIndex = isActive ? 0 : -1;
+    if (isActive) els.reportView.setAttribute("aria-labelledby", tab.id);
+  });
 }
 
 function renderSummary() {
   const { analysis } = state;
-  const runtime = typeof analysis.runtimeSeconds === "number" ? `${analysis.runtimeSeconds.toFixed(2)} sec` : "Unknown";
+  const runtime = typeof analysis.runtimeSeconds === "number" ? `${analysis.runtimeSeconds.toFixed(2)} sec` : t("report.summary.unknownRuntime");
   const notes = [...analysis.exception.notes];
-  if (analysis.lastException.present) notes.push("Last Exception Backtrace");
-  if (!analysis.symbolication.fullySymbolicated) notes.push(`${analysis.symbolication.unsymbolicatedFrames} unsymbolicated frames`);
+  if (analysis.lastException.present) notes.push(t("report.summary.lastException"));
+  if (!analysis.symbolication.fullySymbolicated) notes.push(t("report.summary.unsymbolicatedFrames", { count: analysis.symbolication.unsymbolicatedFrames }));
 
   return `
     <div class="summary-grid">
@@ -271,8 +317,8 @@ function renderSummary() {
         </div>
         <div class="status-row">
           <span class="status-pill danger">${highlight(analysis.exception.category)}</span>
-          <span class="status-pill">${highlight(analysis.environment.platform || "Unknown platform")}</span>
-          <span class="status-pill warn">Runtime ${escapeHtml(runtime)}</span>
+          <span class="status-pill">${highlight(analysis.environment.platform || t("report.summary.unknownPlatform"))}</span>
+          <span class="status-pill warn">${escapeHtml(t("report.summary.runtime", { runtime }))}</span>
           ${notes.map((note) => `<span class="status-pill warn">${highlight(note)}</span>`).join("")}
         </div>
       </section>
@@ -280,69 +326,69 @@ function renderSummary() {
       ${renderRootCauseGuide(analysis.rootCause)}
 
       <section class="panel">
-        <h3 class="section-title">Environment</h3>
+        <h3 class="section-title">${escapeHtml(t("report.summary.environment"))}</h3>
         ${definitionList([
-          ["Process", processLine(analysis)],
-          ["Bundle ID", analysis.identity.bundleId],
-          ["Version", analysis.identity.version],
-          ["OS Version", analysis.environment.osVersion],
-          ["Hardware", analysis.environment.model],
-          ["Architecture", analysis.environment.cpuType],
-          ["Role", analysis.environment.role],
-          ["Parent", analysis.environment.parentProcess],
-          ["Launch Time", analysis.environment.launchedAt],
-          ["Crash Time", analysis.environment.crashedAt],
+          [t("report.fields.process"), processLine(analysis)],
+          [t("report.fields.bundleId"), analysis.identity.bundleId],
+          [t("report.fields.version"), analysis.identity.version],
+          [t("report.fields.osVersion"), analysis.environment.osVersion],
+          [t("report.fields.hardware"), analysis.environment.model],
+          [t("report.fields.architecture"), analysis.environment.cpuType],
+          [t("report.fields.role"), analysis.environment.role],
+          [t("report.fields.parent"), analysis.environment.parentProcess],
+          [t("report.fields.launchTime"), analysis.environment.launchedAt],
+          [t("report.fields.crashTime"), analysis.environment.crashedAt],
         ])}
       </section>
 
       <section class="panel">
-        <h3 class="section-title">Exception / Termination</h3>
+        <h3 class="section-title">${escapeHtml(t("report.summary.exceptionTermination"))}</h3>
         ${definitionList([
-          ["Exception Type", `${analysis.exception.type} ${analysis.exception.signal ? `(${analysis.exception.signal})` : ""}`],
-          ["Codes", analysis.exception.codes],
-          ["Subtype", analysis.exception.subtype],
-          ["Message", analysis.exception.message],
-          ["Termination", `${analysis.exception.terminationNamespace} ${analysis.exception.terminationCode ?? ""} ${analysis.exception.terminationIndicator}`],
-          ["Terminator", analysis.exception.terminatingProcess],
-          ["Triggered Thread", String(analysis.crashedThread.index)],
+          [t("report.fields.exceptionType"), `${analysis.exception.type} ${analysis.exception.signal ? `(${analysis.exception.signal})` : ""}`],
+          [t("report.fields.codes"), analysis.exception.codes],
+          [t("report.fields.subtype"), analysis.exception.subtype],
+          [t("report.fields.message"), analysis.exception.message],
+          [t("report.fields.termination"), `${analysis.exception.terminationNamespace} ${analysis.exception.terminationCode ?? ""} ${analysis.exception.terminationIndicator}`],
+          [t("report.fields.terminator"), analysis.exception.terminatingProcess],
+          [t("report.fields.triggeredThread"), String(analysis.crashedThread.index)],
         ])}
       </section>
 
       <section class="panel">
-        <h3 class="section-title">Binary Image Summary</h3>
+        <h3 class="section-title">${escapeHtml(t("report.summary.binaryImageSummary"))}</h3>
         ${definitionList([
-          ["Images", String(analysis.binarySummary.counts.total)],
-          ["Process Images", String(analysis.binarySummary.counts.process)],
-          ["System Images", String(analysis.binarySummary.counts.system)],
-          ["Private Frameworks", String(analysis.binarySummary.counts.privateFrameworks)],
-          ["Third Party/User", String(analysis.binarySummary.counts.thirdPartyOrUser)],
-          ["Symbolication", analysis.symbolication.fullySymbolicated ? "No unsymbolicated frames in checked stacks" : `${analysis.symbolication.unsymbolicatedFrames} unsymbolicated frames`],
+          [t("report.fields.images"), String(analysis.binarySummary.counts.total)],
+          [t("report.fields.processImages"), String(analysis.binarySummary.counts.process)],
+          [t("report.fields.systemImages"), String(analysis.binarySummary.counts.system)],
+          [t("report.fields.privateFrameworks"), String(analysis.binarySummary.counts.privateFrameworks)],
+          [t("report.fields.thirdPartyUser"), String(analysis.binarySummary.counts.thirdPartyOrUser)],
+          [t("report.fields.symbolication"), analysis.symbolication.fullySymbolicated ? t("report.fields.noUnsymbolicatedFrames") : t("report.summary.unsymbolicatedFrames", { count: analysis.symbolication.unsymbolicatedFrames })],
         ])}
       </section>
     </div>
 
     <section class="section">
       <div class="section-header">
-        <h3 class="section-title">Crashed Thread</h3>
-        <p>${highlight(analysis.crashedThread.queue || analysis.crashedThread.name || "No thread label")}</p>
+        <h3 class="section-title">${escapeHtml(t("report.summary.crashedThread"))}</h3>
+        <p>${highlight(analysis.crashedThread.queue || analysis.crashedThread.name || t("report.summary.noThreadLabel"))}</p>
       </div>
       ${framesTable(filterFrames(analysis.crashedThread.frames).slice(0, 24))}
     </section>
 
     <section class="section">
       <div class="section-header">
-        <h3 class="section-title">Diagnostic Messages</h3>
-        <p>${analysis.diagnostics.length || "No"} messages</p>
+        <h3 class="section-title">${escapeHtml(t("report.summary.diagnosticMessages"))}</h3>
+        <p>${analysis.diagnostics.length ? escapeHtml(t("report.summary.messages", { count: analysis.diagnostics.length })) : escapeHtml(t("report.summary.noMessages"))}</p>
       </div>
       ${diagnosticsList(analysis.diagnostics)}
     </section>
 
     <section class="section">
       <div class="section-header">
-        <h3 class="section-title">Recommended Next Actions</h3>
+        <h3 class="section-title">${escapeHtml(t("report.summary.recommendedNextActions"))}</h3>
       </div>
       <ol class="recommendations">
-        ${analysis.recommendations.map((item, index) => `<li><strong>Step ${index + 1}</strong>${highlight(item)}</li>`).join("")}
+        ${analysis.recommendations.map((item, index) => `<li><strong>${escapeHtml(t("report.summary.step", { number: index + 1 }))}</strong>${highlight(item)}</li>`).join("")}
       </ol>
     </section>
   `;
@@ -354,10 +400,10 @@ function renderRootCauseGuide(rootCause) {
   return `
     <section class="panel root-guide">
       <div class="section-header">
-        <h3 class="section-title">Root Cause Guide</h3>
-        <span class="status-pill ${rootCause.confidence === "high" ? "danger" : "warn"}">${escapeHtml(rootCause.confidence || "unknown")} confidence</span>
+        <h3 class="section-title">${escapeHtml(t("report.summary.rootCauseGuide"))}</h3>
+        <span class="status-pill ${rootCause.confidence === "high" ? "danger" : "warn"}">${escapeHtml(t("report.summary.confidence", { confidence: rootCause.confidence || t("report.copy.unknown") }))}</span>
       </div>
-      <h4>${highlight(rootCause.headline || "Needs full-report correlation")}</h4>
+      <h4>${highlight(rootCause.headline || t("report.summary.needsCorrelation"))}</h4>
       <p>${highlight(rootCause.summary || "")}</p>
       <div class="clue-grid">
         ${(rootCause.signals ?? []).map((signal) => `
@@ -374,7 +420,7 @@ function renderRootCauseGuide(rootCause) {
 
 function renderThreads() {
   const threads = state.parsed.report.threads ?? [];
-  if (!threads.length) return `<section class="section"><h3 class="section-title">No threads found</h3></section>`;
+  if (!threads.length) return `<section class="section"><h3 class="section-title">${escapeHtml(t("report.summary.noThreadsFound"))}</h3></section>`;
 
   return `
     <div class="thread-stack">
@@ -383,10 +429,10 @@ function renderThreads() {
         return `
           <section class="thread-card">
             <div class="thread-title">
-              <h3>Thread ${index}${thread.triggered ? " Crashed" : ""}</h3>
+              <h3>${escapeHtml(t("report.summary.thread", { index }))}${thread.triggered ? ` ${escapeHtml(t("report.summary.crashed"))}` : ""}</h3>
               ${thread.queue ? `<span class="status-pill">${highlight(thread.queue)}</span>` : ""}
               ${thread.name ? `<span class="status-pill">${highlight(thread.name)}</span>` : ""}
-              <span class="status-pill">${frames.length} frames shown</span>
+              <span class="status-pill">${escapeHtml(t("report.summary.framesShown", { count: frames.length }))}</span>
             </div>
             ${framesTable(frames)}
           </section>
@@ -401,12 +447,12 @@ function renderImages() {
   return `
     <section class="section">
       <div class="section-header">
-        <h3 class="section-title">Binary Images</h3>
-        <p>${images.length} of ${(state.parsed.report.usedImages ?? []).length} shown</p>
+        <h3 class="section-title">${escapeHtml(t("report.summary.binaryImages"))}</h3>
+        <p>${escapeHtml(t("report.summary.imagesShown", { shown: images.length, total: (state.parsed.report.usedImages ?? []).length }))}</p>
       </div>
-      <div class="table-wrap">
+      <div class="table-wrap" tabindex="0" role="region" aria-label="${escapeAttr(t("report.table.binaryImagesRegion"))}">
         <table>
-          <thead><tr><th>Name</th><th>Identifier</th><th>Version</th><th>Arch</th><th>Base</th><th>Size</th><th>UUID</th><th>Path</th></tr></thead>
+          <thead><tr><th>${escapeHtml(t("report.table.name"))}</th><th>${escapeHtml(t("report.table.identifier"))}</th><th>${escapeHtml(t("report.table.version"))}</th><th>${escapeHtml(t("report.table.arch"))}</th><th>${escapeHtml(t("report.table.base"))}</th><th>${escapeHtml(t("report.table.size"))}</th><th>${escapeHtml(t("report.table.uuid"))}</th><th>${escapeHtml(t("report.table.path"))}</th></tr></thead>
           <tbody>
             ${images.map((image) => `
               <tr>
@@ -437,11 +483,11 @@ function renderRaw() {
 }
 
 function framesTable(frames) {
-  if (!frames.length) return `<p class="muted">No frames match the current filters.</p>`;
+  if (!frames.length) return `<p class="muted">${escapeHtml(t("report.summary.noFramesMatch"))}</p>`;
   return `
-    <div class="table-wrap">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="${escapeAttr(t("report.table.stackFramesRegion"))}">
       <table>
-        <thead><tr><th>#</th><th>Address</th><th>Image</th><th>Symbol</th><th>Offset</th><th>Path</th></tr></thead>
+        <thead><tr><th>${escapeHtml(t("report.table.index"))}</th><th>${escapeHtml(t("report.table.address"))}</th><th>${escapeHtml(t("report.table.image"))}</th><th>${escapeHtml(t("report.table.symbol"))}</th><th>${escapeHtml(t("report.table.offset"))}</th><th>${escapeHtml(t("report.table.path"))}</th></tr></thead>
         <tbody>
           ${frames.map((frame, index) => `
             <tr>
@@ -460,7 +506,7 @@ function framesTable(frames) {
 }
 
 function diagnosticsList(diagnostics) {
-  if (!diagnostics.length) return `<p class="muted">No diagnostic messages were included in this report.</p>`;
+  if (!diagnostics.length) return `<p class="muted">${escapeHtml(t("report.summary.noDiagnosticMessages"))}</p>`;
   return `
     <ul class="diagnostic-list">
       ${diagnostics.map((item) => `<li><strong>${highlight(item.source)}</strong>${highlight(item.message)}</li>`).join("")}
@@ -473,7 +519,7 @@ function definitionList(items) {
     <dl class="definition-list">
       ${items.map(([key, value]) => `
         <dt>${escapeHtml(key)}</dt>
-        <dd>${value ? highlight(String(value)) : '<span class="muted">Not present</span>'}</dd>
+        <dd>${value ? highlight(String(value)) : `<span class="muted">${escapeHtml(t("report.fields.notPresent"))}</span>`}</dd>
       `).join("")}
     </dl>
   `;
@@ -487,7 +533,7 @@ function normalizeFrame(frame) {
     : "";
   return {
     imageIndex: frame.imageIndex,
-    imageName: image.name || basename(image.path) || "Unknown image",
+    imageName: image.name || basename(image.path) || t("report.copy.unknownImage"),
     imagePath: image.path || "",
     address,
     symbol: frame.symbol || "<unsymbolicated>",
@@ -520,16 +566,16 @@ async function copySummary() {
   const { analysis } = state;
   const text = [
     `${analysis.identity.process}: ${analysis.exception.type} ${analysis.exception.signal ? `(${analysis.exception.signal})` : ""}`,
-    `Category: ${analysis.exception.category}`,
-    `Root cause guide: ${analysis.rootCause?.headline || "not available"}`,
-    `Root cause summary: ${analysis.rootCause?.summary || "not available"}`,
-    `Hypothesis: ${analysis.hypothesis}`,
-    `Top frame: ${analysis.crashedThread.frames[0]?.symbol || "unknown"} in ${analysis.crashedThread.frames[0]?.imageName || "unknown image"}`,
-    "Recommendations:",
+    `${t("report.copy.category")}: ${analysis.exception.category}`,
+    `${t("report.copy.rootCauseGuide")}: ${analysis.rootCause?.headline || t("report.copy.notAvailable")}`,
+    `${t("report.copy.rootCauseSummary")}: ${analysis.rootCause?.summary || t("report.copy.notAvailable")}`,
+    `${t("report.copy.hypothesis")}: ${analysis.hypothesis}`,
+    `${t("report.copy.topFrame")}: ${analysis.crashedThread.frames[0]?.symbol || t("report.copy.unknown")} in ${analysis.crashedThread.frames[0]?.imageName || t("report.copy.unknownImage")}`,
+    `${t("report.copy.recommendations")}:`,
     ...analysis.recommendations.map((item) => `- ${item}`),
   ].join("\n");
   await navigator.clipboard.writeText(text);
-  flashStatus("Summary copied to clipboard.");
+  flashStatus(t("status.summaryCopied"));
 }
 
 function downloadAnalysisJson() {
@@ -542,7 +588,7 @@ function downloadAnalysisJson() {
   link.download = `${state.analysis.identity.process || "crash-report"}.analysis.json`;
   link.click();
   URL.revokeObjectURL(url);
-  flashStatus("Analysis JSON exported.");
+  flashStatus(t("status.jsonExported"));
 }
 
 function flashStatus(message) {

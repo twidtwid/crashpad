@@ -3,92 +3,92 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Ephemeral Apple crash report analyzer for .ips and .crash files.">
-  <meta property="og:title" content="Crash Reporter">
-  <meta property="og:description" content="Upload Apple crash reports and inspect a structured diagnostic report.">
+  <meta name="description" content="Ephemeral Apple crash report analyzer for .ips and .crash files." data-i18n-content="app.description">
+  <meta property="og:title" content="Crash Reporter" data-i18n-content="app.name">
+  <meta property="og:description" content="Upload Apple crash reports and inspect a structured diagnostic report." data-i18n-content="app.ogDescription">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Crash Reporter">
+  <meta property="og:site_name" content="Crash Reporter" data-i18n-content="app.name">
   <meta name="twitter:card" content="summary">
-  <title>Crash Reporter</title>
+  <title data-i18n="app.name">Crash Reporter</title>
   <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
   <div class="app-shell">
-    <aside class="rail" aria-label="Crash report controls">
+    <aside class="rail" aria-label="Crash report controls" data-i18n-aria-label="controls.ariaLabel">
       <div class="brand-row">
-        <button class="icon-button" id="focusToggle" type="button" title="Toggle focus mode" aria-label="Toggle focus mode">
-          <span></span><span></span><span></span>
+        <button class="icon-button" id="focusToggle" type="button" title="Toggle focus mode" aria-label="Toggle focus mode" data-i18n-title="actions.focusToggle" data-i18n-aria-label="actions.focusToggle">
+          <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
         </button>
-        <h1>Crash Reporter</h1>
+        <h1 data-i18n="app.name">Crash Reporter</h1>
       </div>
 
       <section class="rail-section">
-        <h2>Upload .ips / .crash</h2>
+        <h2 data-i18n="upload.title">Upload .ips / .crash</h2>
         <label class="drop-zone" id="dropZone">
-          <input id="fileInput" type="file" accept=".ips,.crash,.txt,application/json,text/plain">
-          <strong>Drop file here</strong>
-          <span>parsed in this browser tab only</span>
+          <input id="fileInput" type="file" accept=".ips,.crash,.txt,application/json,text/plain" aria-describedby="privacyNote">
+          <strong data-i18n="upload.drop">Drop file here</strong>
+          <span data-i18n="upload.hint">parsed in this browser tab only</span>
         </label>
-        <p class="privacy-note">Uploads are not sent to this server. Use Forget report to clear in-memory report data.</p>
+        <p class="privacy-note" id="privacyNote" data-i18n="upload.privacy">Uploads are not sent to this server. Use Forget report to clear in-memory report data.</p>
       </section>
 
       <section class="rail-section">
-        <h2>Example</h2>
+        <h2 data-i18n="samples.title">Example</h2>
         <div class="sample-list" id="sampleList"></div>
       </section>
 
       <section class="rail-section">
-        <h2>Filters & Search</h2>
-        <label class="field-label" for="searchInput">Search report</label>
-        <input id="searchInput" class="search" type="search" placeholder="symbol, framework, exception...">
+        <h2 data-i18n="filters.title">Filters & Search</h2>
+        <label class="field-label" for="searchInput" data-i18n="filters.searchLabel">Search report</label>
+        <input id="searchInput" class="search" type="search" placeholder="symbol, framework, exception..." data-i18n-placeholder="filters.searchPlaceholder">
         <label class="check-row">
           <input id="systemFramesToggle" type="checkbox" checked>
-          <span>Show system frames</span>
+          <span data-i18n="filters.showSystemFrames">Show system frames</span>
         </label>
-        <button id="clearFilters" class="secondary-button" type="button">Reset filters</button>
+        <button id="clearFilters" class="secondary-button" type="button" data-i18n="filters.reset">Reset filters</button>
       </section>
 
       <section class="rail-section status-section">
-        <h2>Status</h2>
-        <div id="statusBox" class="status-box">Waiting for a crash report.</div>
+        <h2 data-i18n="status.title">Status</h2>
+        <div id="statusBox" class="status-box" role="status" aria-live="polite" aria-atomic="true" data-i18n="status.waiting">Waiting for a crash report.</div>
       </section>
 
       <section class="rail-section project-links">
-        <h2>Project</h2>
-        <a href="/privacy">Privacy Policy</a>
-        <a href="https://github.com/twidtwid/crashreporter" rel="noopener noreferrer">GitHub Repository</a>
+        <h2 data-i18n="project.title">Project</h2>
+        <a href="/privacy" data-i18n="privacy.title">Privacy Policy</a>
+        <a href="https://github.com/twidtwid/crashreporter" rel="noopener noreferrer" data-i18n="actions.githubRepository">GitHub Repository</a>
       </section>
     </aside>
 
     <main class="workspace">
       <header class="topbar">
         <div>
-          <p class="kicker">Apple Crash Report Analyzer</p>
-          <h2 id="reportTitle">No report loaded</h2>
+          <p class="kicker" data-i18n="app.kicker">Apple Crash Report Analyzer</p>
+          <h2 id="reportTitle" data-i18n="app.noReportLoaded">No report loaded</h2>
         </div>
         <div class="actions">
-          <a class="secondary-link" href="/privacy">Privacy</a>
-          <a class="secondary-link" href="https://github.com/twidtwid/crashreporter" rel="noopener noreferrer">GitHub</a>
-          <button id="clearReport" type="button" class="secondary-button" disabled>Forget Report</button>
-          <button id="downloadJson" type="button" class="secondary-button" disabled>Export JSON</button>
-          <button id="copySummary" type="button" class="primary-button" disabled>Copy Summary</button>
+          <a class="secondary-link" href="/privacy" data-i18n="actions.privacy">Privacy</a>
+          <a class="secondary-link" href="https://github.com/twidtwid/crashreporter" rel="noopener noreferrer" data-i18n="actions.github">GitHub</a>
+          <button id="clearReport" type="button" class="secondary-button" disabled data-i18n="actions.forgetReport">Forget Report</button>
+          <button id="downloadJson" type="button" class="secondary-button" disabled data-i18n="actions.exportJson">Export JSON</button>
+          <button id="copySummary" type="button" class="primary-button" disabled data-i18n="actions.copySummary">Copy Summary</button>
         </div>
       </header>
 
-      <nav class="tabs" aria-label="Report sections">
-        <button class="tab is-active" type="button" data-tab="summary">Summary</button>
-        <button class="tab" type="button" data-tab="threads">Threads</button>
-        <button class="tab" type="button" data-tab="images">Images</button>
-        <button class="tab" type="button" data-tab="raw">Raw JSON</button>
+      <nav class="tabs" aria-label="Report sections" data-i18n-aria-label="tabs.ariaLabel" role="tablist">
+        <button class="tab is-active" id="tab-summary" type="button" data-tab="summary" role="tab" aria-selected="true" aria-controls="reportView" tabindex="0" data-i18n="tabs.summary">Summary</button>
+        <button class="tab" id="tab-threads" type="button" data-tab="threads" role="tab" aria-selected="false" aria-controls="reportView" tabindex="-1" data-i18n="tabs.threads">Threads</button>
+        <button class="tab" id="tab-images" type="button" data-tab="images" role="tab" aria-selected="false" aria-controls="reportView" tabindex="-1" data-i18n="tabs.images">Images</button>
+        <button class="tab" id="tab-raw" type="button" data-tab="raw" role="tab" aria-selected="false" aria-controls="reportView" tabindex="-1" data-i18n="tabs.raw">Raw JSON</button>
       </nav>
 
-      <section id="emptyState" class="empty-state">
-        <h2>Upload or select a crash report.</h2>
-        <p>The harness parses Apple IPS JSON reports as documented by Apple: metadata JSON on line one, crash report JSON after it, and <code>bug_type</code> <code>309</code> for crash reports. Uploaded reports stay in this browser tab until you reload, close the tab, or click Forget Report.</p>
+      <section id="emptyState" class="empty-state" aria-labelledby="emptyStateTitle">
+        <h2 id="emptyStateTitle" data-i18n="empty.title">Upload or select a crash report.</h2>
+        <p data-i18n-html="empty.bodyHtml">The harness parses Apple IPS JSON reports as documented by Apple: metadata JSON on line one, crash report JSON after it, and <code>bug_type</code> <code>309</code> for crash reports. Uploaded reports stay in this browser tab until you reload, close the tab, or click Forget Report.</p>
       </section>
 
-      <section id="errorState" class="error-state" hidden></section>
-      <section id="reportView" class="report-view" hidden></section>
+      <section id="errorState" class="error-state" role="alert" aria-live="assertive" aria-atomic="true" hidden></section>
+      <section id="reportView" class="report-view" role="tabpanel" aria-labelledby="tab-summary" aria-live="polite" aria-busy="false" tabindex="-1" hidden></section>
     </main>
   </div>
 

@@ -9,6 +9,7 @@
   --rule-strong: #c9c0b1;
   --accent: #0b5cad;
   --accent-soft: #e8f1fb;
+  --focus: #004f9f;
   --warn: #bd7b00;
   --warn-soft: #fff3d7;
   --danger: #b42222;
@@ -35,9 +36,7 @@ body {
   margin: 0;
   min-height: 100dvh;
   overflow-x: hidden;
-  background:
-    linear-gradient(90deg, rgba(22, 19, 15, 0.035) 1px, transparent 1px) 0 0 / 42px 42px,
-    var(--paper);
+  background: var(--paper);
 }
 
 button,
@@ -54,6 +53,16 @@ a {
 
 button {
   min-height: 34px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.drop-zone:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent);
 }
 
 .app-shell {
@@ -378,6 +387,10 @@ button {
   border-color: var(--accent);
 }
 
+.tab:focus-visible {
+  outline-offset: -3px;
+}
+
 .empty-state,
 .error-state {
   max-width: 760px;
@@ -478,7 +491,6 @@ button {
   display: grid;
   gap: 10px;
   border-top: 2px solid var(--danger);
-  background: linear-gradient(180deg, rgba(250, 230, 227, 0.5), transparent 160px);
   padding: 14px 0 0;
 }
 
@@ -837,5 +849,17 @@ mark {
   input,
   button {
     font-size: 16px;
+  }
+}
+
+@media (forced-colors: active) {
+  :focus-visible,
+  .drop-zone:focus-within {
+    outline: 3px solid CanvasText;
+    outline-offset: 3px;
+  }
+
+  .status-pill::before {
+    border: 1px solid CanvasText;
   }
 }

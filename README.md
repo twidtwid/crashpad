@@ -76,6 +76,12 @@ npm run analyze
 
 The parser lives in `src/crashParser.js`. The browser harness lives in `index.html`, `src/app.js`, and `src/styles.css`. The local server is `scripts/server.js`.
 
+## Accessibility and Translation
+
+The UI targets WCAG 2.2 AA checks for the main analyzer and privacy page. Keep interactive controls keyboard reachable, preserve visible `:focus-visible` styling, and run an axe scan when changing layouts or generated report markup.
+
+Static and dynamic UI strings live in `src/i18n/en.js`. Static HTML uses `data-i18n*` attributes applied by `src/i18n/dom.js`; report rendering calls `t()` directly. To add a locale, copy the English catalog, translate values only, and load that catalog from the same i18n boundary.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
