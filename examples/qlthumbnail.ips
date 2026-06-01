@@ -1,12 +1,12 @@
-{"bug_type":"309","name":"SandboxedThumbnailDemo","bundleID":"com.example.SandboxedThumbnailDemo","build_version":"3","platform":1,"incident_id":"DEMO-FRAMEWORK-TRAP","timestamp":"2026-05-26 17:27:42.0000 -0700"}
+{"bug_type":"309","name":"QLThumbnail","bundleID":"com.apple.quicklook.ThumbnailsAgent","build_version":"3","platform":1,"incident_id":"DEMO-QLTHUMBNAIL-TRAP","timestamp":"2026-05-26 17:27:42.0000 -0700"}
 {
   "version": 2,
-  "incident": "DEMO-FRAMEWORK-TRAP",
-  "procName": "SandboxedThumbnailDemo",
+  "incident": "DEMO-QLTHUMBNAIL-TRAP",
+  "procName": "QLThumbnail",
   "pid": 87527,
-  "procPath": "/Applications/SandboxedThumbnailDemo.app/Contents/MacOS/SandboxedThumbnailDemo",
+  "procPath": "/System/Library/Frameworks/QuickLookThumbnailing.framework/Support/QLThumbnail",
   "bundleInfo": {
-    "CFBundleIdentifier": "com.example.SandboxedThumbnailDemo",
+    "CFBundleIdentifier": "com.apple.quicklook.ThumbnailsAgent",
     "CFBundleShortVersionString": "1.0",
     "CFBundleVersion": "3"
   },
@@ -36,7 +36,7 @@
     "byPid": 87527
   },
   "os_fault": {
-    "process": "SandboxedThumbnailDemo"
+    "process": "QLThumbnail"
   },
   "faultingThread": 0,
   "threads": [
@@ -62,6 +62,6 @@
     { "name": "libsystem_secinit.dylib", "path": "/usr/lib/system/libsystem_secinit.dylib", "base": 6834524672, "size": 65536, "uuid": "DEMO-SECINIT", "arch": "arm64e" },
     { "name": "libsystem_trace.dylib", "path": "/usr/lib/system/libsystem_trace.dylib", "base": 6834590208, "size": 196608, "uuid": "DEMO-TRACE", "arch": "arm64e" },
     { "name": "libSystem.B.dylib", "path": "/usr/lib/libSystem.B.dylib", "base": 6834786816, "size": 65536, "uuid": "DEMO-LIBSYSTEM", "arch": "arm64e" },
-    { "name": "SandboxedThumbnailDemo", "CFBundleIdentifier": "com.example.SandboxedThumbnailDemo", "path": "/Applications/SandboxedThumbnailDemo.app/Contents/MacOS/SandboxedThumbnailDemo", "base": 4294967296, "size": 1048576, "uuid": "DEMO-THUMBNAIL", "arch": "arm64" }
+    { "name": "QLThumbnail", "CFBundleIdentifier": "com.apple.quicklook.ThumbnailsAgent", "path": "/System/Library/Frameworks/QuickLookThumbnailing.framework/Support/QLThumbnail", "base": 4294967296, "size": 1048576, "uuid": "DEMO-QLTHUMBNAIL", "arch": "arm64" }
   ]
 }

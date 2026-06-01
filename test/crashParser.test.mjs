@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -10,25 +10,22 @@ import {
   platformName,
 } from "../src/crashParser.js";
 
-const readFixture = (name) => readFile(new URL(`../${name}`, import.meta.url), "utf8");
 const readExample = (name) => readFile(new URL(`../examples/${name}`, import.meta.url), "utf8");
 
 test("parses Apple IPS crash reports as first-line metadata plus JSON report", async () => {
-  const text = await readExample("swift-assertion.ips");
-  const parsed = parseCrashReport(text, { fileName: "swift-assertion.ips" });
+  const parsed = parseCrashReport(await readExample("qlthumbnail.ips"), { fileName: "qlthumbnail.ips" });
 
   assert.equal(parsed.kind, "ips-json");
   assert.equal(parsed.metadata.bug_type, "309");
-  assert.equal(parsed.metadata.name, "PosterDemoExtension");
+  assert.equal(parsed.metadata.name, "QLThumbnail");
   assert.equal(parsed.report.exception.type, "EXC_BREAKPOINT");
   assert.equal(parsed.report.exception.signal, "SIGTRAP");
   assert.equal(parsed.report.faultingThread, 0);
   assert.equal(parsed.report.threads[0].triggered, true);
 });
 
-test("builds a structured analysis for a Swift assertion breakpoint crash", async () => {
-  const parsed = parseCrashReport(await readExample("swift-assertion.ips"));
-  const analysis = analyzeCrashReport(parsed);
+test("builds a structured analysis for a Swift assertion breakpoint crash", () => {
+  const analysis = analyzeCrashReport(parseCrashReport(swiftAssertionIps()));
 
   assert.equal(analysis.identity.process, "PosterDemoExtension");
   assert.equal(analysis.environment.platform, "Mac Catalyst");
@@ -42,9 +39,8 @@ test("builds a structured analysis for a Swift assertion breakpoint crash", asyn
   assert.ok(analysis.runtimeSeconds > 19 && analysis.runtimeSeconds < 20);
 });
 
-test("builds a structured analysis for an abort with last exception backtrace", async () => {
-  const parsed = parseCrashReport(await readExample("language-exception.ips"));
-  const analysis = analyzeCrashReport(parsed);
+test("builds a structured analysis for an abort with last exception backtrace", () => {
+  const analysis = analyzeCrashReport(parseCrashReport(languageExceptionIps()));
 
   assert.equal(analysis.identity.process, "ClipboardDemo");
   assert.equal(analysis.environment.platform, "macOS");
@@ -60,26 +56,20 @@ test("builds a structured analysis for an abort with last exception backtrace", 
   assert.ok(analysis.rootCause.signals.some((signal) => /mechanism/i.test(signal.meaning)));
 });
 
-test("parses and analyzes every IPS crash report currently in the folder", async () => {
-  const files = (await readdir(new URL("../examples/", import.meta.url))).filter((name) => name.endsWith(".ips"));
+test("parses and analyzes the public QLThumbnail example", async () => {
+  const parsed = parseCrashReport(await readExample("qlthumbnail.ips"), { fileName: "qlthumbnail.ips" });
+  const analysis = analyzeCrashReport(parsed);
 
-  assert.ok(files.length >= 5);
-
-  for (const file of files) {
-    const parsed = parseCrashReport(await readExample(file), { fileName: file });
-    const analysis = analyzeCrashReport(parsed);
-
-    assert.equal(parsed.kind, "ips-json", file);
-    assert.equal(parsed.metadata.bug_type, "309", file);
-    assert.ok(analysis.identity.process, file);
-    assert.ok(analysis.exception.category, file);
-    assert.ok(Array.isArray(analysis.recommendations), file);
-  }
+  assert.equal(parsed.kind, "ips-json");
+  assert.equal(parsed.metadata.bug_type, "309");
+  assert.equal(analysis.identity.process, "QLThumbnail");
+  assert.equal(analysis.exception.category, "Breakpoint / assertion trap");
+  assert.match(analysis.rootCause.headline, /framework trap/i);
 });
 
 test("demystifies Swift and framework traps with the documented breakpoint pattern", async () => {
-  const swiftTrap = analyzeCrashReport(parseCrashReport(await readExample("swift-assertion.ips")));
-  const sandboxTrap = analyzeCrashReport(parseCrashReport(await readExample("framework-trap.ips")));
+  const swiftTrap = analyzeCrashReport(parseCrashReport(swiftAssertionIps()));
+  const sandboxTrap = analyzeCrashReport(parseCrashReport(await readExample("qlthumbnail.ips")));
 
   assert.match(swiftTrap.rootCause.headline, /Swift runtime/i);
   assert.ok(swiftTrap.rootCause.signals.some((signal) => /trace trap/i.test(signal.meaning)));
@@ -89,8 +79,8 @@ test("demystifies Swift and framework traps with the documented breakpoint patte
   assert.ok(sandboxTrap.rootCause.signals.some((signal) => /unrecoverable/i.test(signal.meaning)));
 });
 
-test("demystifies simulated user fault reports using exception notes", async () => {
-  const analysis = analyzeCrashReport(parseCrashReport(await readExample("simulated-guard.ips")));
+test("demystifies simulated user fault reports using exception notes", () => {
+  const analysis = analyzeCrashReport(parseCrashReport(simulatedGuardIps()));
 
   assert.equal(analysis.exception.notes.includes("SIMULATED"), true);
   assert.match(analysis.rootCause.headline, /not a normal app crash/i);
@@ -98,8 +88,8 @@ test("demystifies simulated user fault reports using exception notes", async () 
   assert.ok(analysis.rootCause.signals.some((signal) => /WEBKIT/.test(signal.value)));
 });
 
-test("demystifies memory access reports with subtype, address, VM region, and registers", async () => {
-  const analysis = analyzeCrashReport(parseCrashReport(await readExample("memory-access.ips")));
+test("demystifies memory access reports with subtype, address, VM region, and registers", () => {
+  const analysis = analyzeCrashReport(parseCrashReport(memoryAccessIps()));
 
   assert.match(analysis.rootCause.headline, /invalid memory access/i);
   assert.match(analysis.rootCause.summary, /0x0000000000000028/);
@@ -108,8 +98,8 @@ test("demystifies memory access reports with subtype, address, VM region, and re
   assert.ok(analysis.rootCause.signals.some((signal) => signal.label === "Thread State" && /pc/.test(signal.value)));
 });
 
-test("formats frame addresses from image base plus image offset using documented IPS mapping", async () => {
-  const parsed = parseCrashReport(await readExample("swift-assertion.ips"));
+test("formats frame addresses from image base plus image offset using documented IPS mapping", () => {
+  const parsed = parseCrashReport(swiftAssertionIps());
   const frame = parsed.report.threads[0].frames[0];
   const formatted = formatFrame(frame, parsed.report.usedImages);
 
@@ -177,3 +167,152 @@ test("maps documented Apple platform numbers", () => {
   assert.equal(platformName(9), "watchOS Simulator");
   assert.equal(platformName(999), "Unknown platform 999");
 });
+
+function swiftAssertionIps() {
+  return ips(
+    { name: "PosterDemoExtension", bundleID: "com.example.PosterDemoExtension", platform: 6, incident_id: "DEMO-SWIFT" },
+    baseReport({
+      procName: "PosterDemoExtension",
+      bundleId: "com.example.PosterDemoExtension",
+      procPath: "/Applications/PosterDemo.app/Contents/PlugIns/PosterDemoExtension.appex/Contents/MacOS/PosterDemoExtension",
+      procLaunch: "2026-05-30 20:50:02.0000 -0700",
+      captureTime: "2026-05-30 20:50:21.9000 -0700",
+      exception: { codes: "0x0000000000000001, 0x0000000100000cc8", rawCodes: [1, 4294970568], type: "EXC_BREAKPOINT", signal: "SIGTRAP" },
+      termination: { flags: 0, code: 5, namespace: "SIGNAL", indicator: "Trace/BPT trap: 5", byProc: "exc handler", byPid: 12796 },
+      faultingThread: 0,
+      threads: [{
+        id: 15935995,
+        triggered: true,
+        queue: "com.apple.main-thread",
+        frames: [
+          { imageIndex: 0, imageOffset: 3272, symbol: "_assertionFailure(_:_:file:line:flags:)", symbolLocation: 172 },
+          { imageIndex: 1, imageOffset: 16384, symbol: "specialized EnvironmentValues.subscript.getter", symbolLocation: 88 },
+        ],
+        threadState: threadState(4294970568, "(Breakpoint) brk 1"),
+      }],
+      usedImages: [
+        image("libswiftCore.dylib", "/usr/lib/swift/libswiftCore.dylib", 4294967296),
+        image("SwiftUICore", "/System/Library/PrivateFrameworks/SwiftUICore.framework/Versions/A/SwiftUICore", 4378853376),
+      ],
+    }),
+  );
+}
+
+function languageExceptionIps() {
+  return ips(
+    { name: "ClipboardDemo", bundleID: "com.example.ClipboardDemo", platform: 1, incident_id: "DEMO-LANGUAGE" },
+    baseReport({
+      procName: "ClipboardDemo",
+      bundleId: "com.example.ClipboardDemo",
+      procPath: "/Applications/ClipboardDemo.app/Contents/MacOS/ClipboardDemo",
+      exception: { codes: "0x0000000000000000, 0x0000000000000000", rawCodes: [0, 0], type: "EXC_CRASH", signal: "SIGABRT" },
+      termination: { flags: 0, code: 6, namespace: "SIGNAL", indicator: "Abort trap: 6", byProc: "ClipboardDemo", byPid: 43395 },
+      asi: { "libsystem_c.dylib": ["abort() called"] },
+      faultingThread: 0,
+      threads: [{
+        id: 1000,
+        triggered: true,
+        queue: "com.apple.main-thread",
+        frames: [
+          { imageIndex: 0, imageOffset: 28440, symbol: "__pthread_kill", symbolLocation: 8 },
+          { imageIndex: 1, imageOffset: 49600, symbol: "abort", symbolLocation: 124 },
+        ],
+        threadState: threadState(6442479384, "(Syscall)"),
+      }],
+      lastExceptionBacktrace: [
+        { imageIndex: 2, imageOffset: 4096, symbol: "__exceptionPreprocess", symbolLocation: 164 },
+        { imageIndex: 3, imageOffset: 8192, symbol: "objc_exception_throw", symbolLocation: 60 },
+        { imageIndex: 4, imageOffset: 4728, symbol: "-[NSURL(NSURL) _trueSelf]", symbolLocation: 128 },
+      ],
+      usedImages: [
+        image("libsystem_kernel.dylib", "/usr/lib/system/libsystem_kernel.dylib", 6442450944),
+        image("libsystem_c.dylib", "/usr/lib/system/libsystem_c.dylib", 6444544000),
+        image("CoreFoundation", "/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation", 6459228160),
+        image("libobjc.A.dylib", "/usr/lib/libobjc.A.dylib", 6455033856),
+        image("Foundation", "/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation", 6408896512),
+      ],
+    }),
+  );
+}
+
+function simulatedGuardIps() {
+  return ips(
+    { name: "BrowserFaultDemo", bundleID: "com.example.BrowserFaultDemo", platform: 2, incident_id: "DEMO-GUARD" },
+    baseReport({
+      procName: "BrowserFaultDemo",
+      bundleId: "com.example.BrowserFaultDemo",
+      procPath: "/private/var/containers/Bundle/Application/DEMO/BrowserFaultDemo.app/BrowserFaultDemo",
+      isSimulated: 1,
+      exception: { codes: "0x600000000000001f, 0x0000000000000000", rawCodes: [6917529027641081856, 0], type: "EXC_GUARD", subtype: "GUARD_TYPE_USER", message: "namespc 31 reason_code 0x0000000000000000", namespc: 31 },
+      termination: { namespace: "WEBKIT", flags: 518, code: 0 },
+      faultingThread: 0,
+      threads: [{ id: 3000, triggered: true, queue: "com.apple.main-thread", frames: [{ imageIndex: 0, imageOffset: 4096, symbol: "os_fault_with_payload", symbolLocation: 8 }] }],
+      usedImages: [image("libsystem_kernel.dylib", "/usr/lib/system/libsystem_kernel.dylib", 6442450944)],
+    }),
+  );
+}
+
+function memoryAccessIps() {
+  return ips(
+    { name: "MemoryAccessDemo", bundleID: "com.example.MemoryAccessDemo", platform: 7, incident_id: "DEMO-MEMORY" },
+    baseReport({
+      procName: "MemoryAccessDemo",
+      bundleId: "com.example.MemoryAccessDemo",
+      procPath: "/Users/example/MemoryAccessDemo.app/MemoryAccessDemo",
+      exception: { codes: "0x0000000000000001, 0x0000000000000028", rawCodes: [1, 40], type: "EXC_BAD_ACCESS", signal: "SIGSEGV", subtype: "KERN_INVALID_ADDRESS at 0x0000000000000028" },
+      termination: { flags: 0, code: 11, namespace: "SIGNAL", indicator: "Segmentation fault: 11", byProc: "exc handler", byPid: 32106 },
+      faultingThread: 1,
+      vmregioninfo: "0x28 is not in any region. Bytes before following region: 4294967256 REGION TYPE START - END [ VSIZE] PRT/MAX SHRMOD REGION DETAIL UNUSED SPACE AT START ---> __TEXT 100000000-100080000 [ 512K] r-x/r-x SM=COW /Users/example/MemoryAccessDemo.app/MemoryAccessDemo",
+      threads: [
+        { id: 4000, triggered: false, frames: [{ imageIndex: 1, imageOffset: 4096, symbol: "start", symbolLocation: 0 }] },
+        { id: 4001, triggered: true, queue: "DispatchQueueOrchestrationScheduler_generatorQueue_unspecified_priority", frames: [{ imageIndex: 0, imageOffset: 8192 }, { imageIndex: 2, imageOffset: 12288, symbol: "specialized Future.init(_:)", symbolLocation: 104 }], threadState: threadState(4294975488, "(Data Abort) byte read Translation fault", 40) },
+      ],
+      usedImages: [
+        image("MemoryAccessDemo", "/Users/example/MemoryAccessDemo.app/MemoryAccessDemo", 4294967296),
+        image("dyld", "/usr/lib/dyld", 6442450944),
+        image("Combine", "/System/Library/Frameworks/Combine.framework/Combine", 5368709120),
+      ],
+    }),
+  );
+}
+
+function ips(metadata, report) {
+  return `${JSON.stringify({ bug_type: "309", timestamp: "2026-05-31 12:00:00.0000 -0700", ...metadata })}\n${JSON.stringify(report)}`;
+}
+
+function baseReport(overrides) {
+  return {
+    version: 2,
+    incident: overrides.incident ?? "DEMO",
+    procName: overrides.procName,
+    pid: overrides.pid ?? 42,
+    procPath: overrides.procPath,
+    bundleInfo: {
+      CFBundleIdentifier: overrides.bundleId,
+      CFBundleShortVersionString: "1.0",
+      CFBundleVersion: "1",
+    },
+    modelCode: "Mac14,14",
+    cpuType: "ARM-64",
+    osVersion: { train: "macOS 26.5", build: "25F71", releaseType: "User" },
+    parentProc: "launchd",
+    parentPid: 1,
+    captureTime: overrides.captureTime ?? "2026-05-31 12:00:00.0000 -0700",
+    procLaunch: overrides.procLaunch ?? "2026-05-31 11:59:59.0000 -0700",
+    ...overrides,
+  };
+}
+
+function image(name, path, base) {
+  return { name, path, base, size: 1048576, uuid: `DEMO-${name}`, arch: "arm64e" };
+}
+
+function threadState(pc, esrDescription, far = 0) {
+  return {
+    flavor: "ARM_THREAD_STATE64",
+    pc: { value: pc, matchesCrashFrame: 1 },
+    lr: { value: pc - 8 },
+    far: { value: far },
+    esr: { value: 2449473542, description: esrDescription },
+  };
+}

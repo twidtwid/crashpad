@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Local Apple crash report analyzer for .ips and .crash files.">
+  <meta name="description" content="Ephemeral Apple crash report analyzer for .ips and .crash files.">
   <meta property="og:title" content="Crash Reporter">
   <meta property="og:description" content="Upload Apple crash reports and inspect a structured diagnostic report.">
   <meta property="og:type" content="website">
@@ -27,12 +27,13 @@
         <label class="drop-zone" id="dropZone">
           <input id="fileInput" type="file" accept=".ips,.crash,.txt,application/json,text/plain">
           <strong>Drop file here</strong>
-          <span>or choose a local report</span>
+          <span>parsed in this browser tab only</span>
         </label>
+        <p class="privacy-note">Uploads are not sent to this server. Use Forget report to clear in-memory report data.</p>
       </section>
 
       <section class="rail-section">
-        <h2>Samples</h2>
+        <h2>Example</h2>
         <div class="sample-list" id="sampleList"></div>
       </section>
 
@@ -51,6 +52,12 @@
         <h2>Status</h2>
         <div id="statusBox" class="status-box">Waiting for a crash report.</div>
       </section>
+
+      <section class="rail-section project-links">
+        <h2>Project</h2>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="https://github.com/twidtwid/crashreporter" rel="noopener noreferrer">GitHub Repository</a>
+      </section>
     </aside>
 
     <main class="workspace">
@@ -60,6 +67,9 @@
           <h2 id="reportTitle">No report loaded</h2>
         </div>
         <div class="actions">
+          <a class="secondary-link" href="/privacy">Privacy</a>
+          <a class="secondary-link" href="https://github.com/twidtwid/crashreporter" rel="noopener noreferrer">GitHub</a>
+          <button id="clearReport" type="button" class="secondary-button" disabled>Forget Report</button>
           <button id="downloadJson" type="button" class="secondary-button" disabled>Export JSON</button>
           <button id="copySummary" type="button" class="primary-button" disabled>Copy Summary</button>
         </div>
@@ -74,7 +84,7 @@
 
       <section id="emptyState" class="empty-state">
         <h2>Upload or select a crash report.</h2>
-        <p>The harness parses Apple IPS JSON reports as documented by Apple: metadata JSON on line one, crash report JSON after it, and <code>bug_type</code> <code>309</code> for crash reports. Legacy text reports are supported on a best-effort basis.</p>
+        <p>The harness parses Apple IPS JSON reports as documented by Apple: metadata JSON on line one, crash report JSON after it, and <code>bug_type</code> <code>309</code> for crash reports. Uploaded reports stay in this browser tab until you reload, close the tab, or click Forget Report.</p>
       </section>
 
       <section id="errorState" class="error-state" hidden></section>

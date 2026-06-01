@@ -9,6 +9,7 @@ const state = {
   parsed: null,
   analysis: null,
   error: null,
+  source: "",
 };
 
 const els = {
@@ -23,6 +24,7 @@ const els = {
   reportTitle: document.querySelector("#reportTitle"),
   copySummary: document.querySelector("#copySummary"),
   downloadJson: document.querySelector("#downloadJson"),
+  clearReport: document.querySelector("#clearReport"),
   emptyState: document.querySelector("#emptyState"),
   errorState: document.querySelector("#errorState"),
   reportView: document.querySelector("#reportView"),
@@ -94,6 +96,7 @@ function wireEvents() {
 
   els.copySummary.addEventListener("click", copySummary);
   els.downloadJson.addEventListener("click", downloadAnalysisJson);
+  els.clearReport.addEventListener("click", clearReport);
   els.focusToggle.addEventListener("click", () => {
     els.body.classList.toggle("focus-mode");
   });
@@ -112,7 +115,7 @@ async function loadSamples() {
 
 function renderSamples() {
   if (!state.samples.length) {
-    els.sampleList.innerHTML = `<p class="muted">No local samples found.</p>`;
+    els.sampleList.innerHTML = `<p class="muted">No public example found.</p>`;
     return;
   }
 
@@ -133,7 +136,7 @@ async function loadSample(fileName) {
     const response = await fetch(`/api/sample?file=${encodeURIComponent(fileName)}`);
     if (!response.ok) throw new Error(`Could not load sample ${fileName}`);
     const text = await response.text();
-    loadText(text, fileName);
+    loadText(text, fileName, "sample");
     state.activeSample = fileName;
     renderSamples();
   } catch (error) {
@@ -144,7 +147,7 @@ async function loadSample(fileName) {
 async function loadFile(file) {
   try {
     const text = await file.text();
-    loadText(text, file.name);
+    loadText(text, file.name, "upload");
     state.activeSample = "";
     renderSamples();
   } catch (error) {
@@ -154,18 +157,20 @@ async function loadFile(file) {
   }
 }
 
-function loadText(text, fileName) {
+function loadText(text, fileName, source = "") {
   try {
     const parsed = parseCrashReport(text, { fileName });
     const analysis = analyzeCrashReport(parsed);
     state.parsed = parsed;
     state.analysis = analysis;
     state.error = null;
+    state.source = source;
     state.activeTab = "summary";
     render();
   } catch (error) {
     state.parsed = null;
     state.analysis = null;
+    state.source = "";
     setError(error);
   }
 }
@@ -184,6 +189,7 @@ function render() {
   els.reportView.hidden = !hasReport;
   els.copySummary.disabled = !hasReport;
   els.downloadJson.disabled = !hasReport;
+  els.clearReport.disabled = !hasReport && !hasError;
 
   if (hasError) {
     els.reportTitle.textContent = "Could not parse report";
@@ -206,8 +212,26 @@ function render() {
   const { analysis } = state;
   els.reportTitle.textContent = `${analysis.identity.process || "Crash Report"}${analysis.fileName ? ` · ${analysis.fileName}` : ""}`;
   els.statusBox.className = "status-box ok";
-  els.statusBox.textContent = `${analysis.identity.process} parsed successfully. ${analysis.crashedThread.frames.length} crashed-thread frames.`;
+  els.statusBox.textContent = state.source === "upload"
+    ? `${analysis.identity.process} parsed locally. Nothing was uploaded or stored; Forget Report clears it from this tab.`
+    : `${analysis.identity.process} example parsed successfully. ${analysis.crashedThread.frames.length} crashed-thread frames.`;
   renderReport();
+}
+
+function clearReport() {
+  state.activeSample = "";
+  state.activeTab = "summary";
+  state.parsed = null;
+  state.analysis = null;
+  state.error = null;
+  state.source = "";
+  state.query = "";
+  state.showSystemFrames = true;
+  els.searchInput.value = "";
+  els.systemFramesToggle.checked = true;
+  els.fileInput.value = "";
+  renderSamples();
+  render();
 }
 
 function renderReport() {

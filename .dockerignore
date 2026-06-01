@@ -1,0 +1,11 @@
+.DS_Store
+.git
+node_modules
+npm-debug.log*
+
+*.ips
+*.crash
+!examples/qlthumbnail.ips
+
+reports
+docs/superpowers

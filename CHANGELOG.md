@@ -7,4 +7,6 @@ All notable changes to this project will be documented in this file.
 - Added a local browser harness for Apple `.ips` and legacy `.crash` reports.
 - Added structured parsing and analysis for exception, termination, diagnostics, crashed thread, binary images, symbolication status, and root-cause guide output.
 - Added folder-level Markdown and JSON analysis generation.
-- Added sanitized example reports for public-safe testing and demos.
+- Added a sanitized QLThumbnail example for public-safe testing and demos.
+- Added privacy policy page, repository links, and an explicit Forget Report control for ephemeral browser-only uploads.
+- Added container deployment defaults for hosted environments.

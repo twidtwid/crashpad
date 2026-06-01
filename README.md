@@ -1,6 +1,6 @@
 # Crash Reporter
 
-A small local web app for analyzing Apple crash reports. It accepts `.ips` JSON crash reports from iOS, macOS, Catalyst, and simulator targets, plus legacy text `.crash` reports, and produces a structured report that explains the likely root-cause path in plain language.
+A small web app for analyzing Apple crash reports. It accepts `.ips` JSON crash reports from iOS, macOS, Catalyst, and simulator targets, plus legacy text `.crash` reports, and produces a structured report that explains the likely root-cause path in plain language.
 
 The analyzer is based on Apple's crash report documentation:
 
@@ -13,6 +13,7 @@ The analyzer is based on Apple's crash report documentation:
 ## Features
 
 - Upload or drag in `.ips` and `.crash` reports.
+- Keep uploaded reports ephemeral: parsing happens in the browser tab, the server has no upload endpoint, and Forget Report clears in-memory report data.
 - Parse Apple's two-object IPS JSON format and reject non-crash IPS logs.
 - Render summary, environment, exception and termination fields, diagnostics, crashed thread frames, binary images, and raw JSON.
 - Explain likely root cause using documented clues such as Last Exception Backtrace, VM Region Info, exception notes, triggered thread, and thread-state registers.
@@ -25,7 +26,7 @@ The analyzer is based on Apple's crash report documentation:
 npm start
 ```
 
-Open [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The app lists sanitized examples from `examples/` and any private `.ips` or `.crash` reports you place in the project root.
+Open [http://127.0.0.1:4173/](http://127.0.0.1:4173/). The app lists one sanitized QLThumbnail example from `examples/`.
 
 Run checks:
 
@@ -43,9 +44,21 @@ Generated analysis files are written to `reports/`.
 
 ## Privacy Model
 
-Crash reports can contain device models, OS builds, process paths, bundle identifiers, incident identifiers, stack traces, and diagnostic messages. This repo intentionally ignores real `.ips` and `.crash` files, plus generated `reports/` output. Only sanitized demo reports under `examples/` are committed.
+Crash reports can contain device models, OS builds, process paths, bundle identifiers, incident identifiers, stack traces, and diagnostic messages. This repo intentionally ignores real `.ips` and `.crash` files, plus generated `reports/` output. Only the sanitized QLThumbnail demo under `examples/` is committed.
 
-Before making a fork or deployment public, review any added fixtures and generated artifacts for private paths, identifiers, proprietary symbols, or user data.
+The browser upload flow does not transmit report file contents to the server. The report is parsed in the current tab and retained in page memory until the user clicks Forget Report, reloads the page, or closes the tab. Export JSON and Copy Summary are local browser actions initiated by the user.
+
+The hosted page includes `/privacy`, which states the same policy in user-facing language. Before making a fork or deployment public, review any added fixtures and generated artifacts for private paths, identifiers, proprietary symbols, or user data.
+
+## Deployment
+
+The server reads `PORT` and `HOST` from the environment. For local development it defaults to `127.0.0.1:4173`; container hosts should set `HOST=0.0.0.0`.
+
+```sh
+HOST=0.0.0.0 PORT=8080 npm start
+```
+
+A minimal `Dockerfile` is included for Fly.io-style container deployment.
 
 ## Report Interpretation
 
