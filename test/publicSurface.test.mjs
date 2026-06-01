@@ -58,6 +58,35 @@ test("project links stay in the sidebar instead of the report action bar", async
   assert.doesNotMatch(actionBar, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
 });
 
+test("topbar exposes persistent focus and color mode controls", async () => {
+  const [html, app, css, messages] = await Promise.all([
+    readProjectFile("index.html"),
+    readProjectFile("src/app.js"),
+    readProjectFile("src/styles.css"),
+    readProjectFile("src/i18n/en.js"),
+  ]);
+  const rail = html.match(/<aside class="rail"[\s\S]*?<\/aside>/)?.[0] ?? "";
+  const topbar = html.match(/<header class="topbar">[\s\S]*?<\/header>/)?.[0] ?? "";
+
+  assert.doesNotMatch(rail, /id="focusToggle"/);
+  assert.match(topbar, /id="focusToggle"/);
+  assert.match(topbar, /id="themeToggle"/);
+  assert.match(topbar, /class="utility-buttons" role="group"/);
+  assert.match(topbar, /class="topbar-controls"/);
+  assert.match(app, /setFocusMode/);
+  assert.match(app, /setTheme/);
+  assert.match(css, /html\[data-theme="dark"\]/);
+  assert.match(messages, /themeToggle/);
+});
+
+test("topbar action buttons use a compact density", async () => {
+  const css = await readProjectFile("src/styles.css");
+
+  assert.match(css, /\.actions \.primary-button,\s*\.actions \.secondary-button/);
+  assert.match(css, /min-height:\s*30px/);
+  assert.match(css, /padding:\s*4px 10px/);
+});
+
 test("exposes a printable report surface and print action", async () => {
   const [html, app, css, messages] = await Promise.all([
     readProjectFile("index.html"),

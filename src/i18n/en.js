@@ -9,9 +9,16 @@ export const messages = {
   },
   controls: {
     ariaLabel: "Crash report controls",
+    viewControls: "View controls",
   },
   actions: {
     focusToggle: "Toggle focus mode",
+    exitFocusMode: "Exit focus mode",
+    themeToggle: "Toggle light/dark mode",
+    darkMode: "Dark",
+    lightMode: "Light",
+    switchToDarkMode: "Switch to dark mode",
+    switchToLightMode: "Switch to light mode",
     privacy: "Privacy",
     github: "GitHub",
     githubRepository: "GitHub Repository",

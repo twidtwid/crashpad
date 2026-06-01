@@ -12,6 +12,8 @@ const state = {
   analysis: null,
   error: null,
   source: "",
+  focusMode: false,
+  theme: "light",
 };
 
 const els = {
@@ -34,6 +36,7 @@ const els = {
   printView: document.querySelector("#printView"),
   tabs: document.querySelectorAll(".tab"),
   focusToggle: document.querySelector("#focusToggle"),
+  themeToggle: document.querySelector("#themeToggle"),
 };
 
 init();
@@ -41,6 +44,8 @@ init();
 async function init() {
   applyStaticTranslations();
   wireEvents();
+  setFocusMode(false);
+  setTheme("light");
   await loadSamples();
   if (state.samples.length) {
     await loadSample(state.samples[0].name);
@@ -105,9 +110,28 @@ function wireEvents() {
   els.downloadJson.addEventListener("click", downloadAnalysisJson);
   els.printReport.addEventListener("click", printCurrentReport);
   els.clearReport.addEventListener("click", clearReport);
-  els.focusToggle.addEventListener("click", () => {
-    els.body.classList.toggle("focus-mode");
-  });
+  els.focusToggle.addEventListener("click", () => setFocusMode(!state.focusMode));
+  els.themeToggle.addEventListener("click", () => setTheme(state.theme === "dark" ? "light" : "dark"));
+}
+
+function setFocusMode(enabled) {
+  state.focusMode = enabled;
+  els.body.classList.toggle("focus-mode", enabled);
+  els.focusToggle.setAttribute("aria-pressed", String(enabled));
+  const label = t(enabled ? "actions.exitFocusMode" : "actions.focusToggle");
+  els.focusToggle.setAttribute("aria-label", label);
+  els.focusToggle.title = label;
+}
+
+function setTheme(theme) {
+  state.theme = theme;
+  const isDark = theme === "dark";
+  document.documentElement.dataset.theme = theme;
+  els.themeToggle.setAttribute("aria-pressed", String(isDark));
+  const label = t(isDark ? "actions.switchToLightMode" : "actions.switchToDarkMode");
+  els.themeToggle.textContent = t(isDark ? "actions.lightMode" : "actions.darkMode");
+  els.themeToggle.setAttribute("aria-label", label);
+  els.themeToggle.title = label;
 }
 
 function activateTab(tabName, { focus = false } = {}) {

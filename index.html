@@ -16,9 +16,6 @@
   <div class="app-shell">
     <aside class="rail" aria-label="Crash report controls" data-i18n-aria-label="controls.ariaLabel">
       <div class="brand-row">
-        <button class="icon-button" id="focusToggle" type="button" title="Toggle focus mode" aria-label="Toggle focus mode" data-i18n-title="actions.focusToggle" data-i18n-aria-label="actions.focusToggle">
-          <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
-        </button>
         <h1 data-i18n="app.name">CrashPad</h1>
       </div>
 
@@ -66,11 +63,19 @@
           <p class="kicker" data-i18n="app.kicker">Apple Crash Report Analyzer</p>
           <h2 id="reportTitle" data-i18n="app.noReportLoaded">No report loaded</h2>
         </div>
-        <div class="actions">
-          <button id="clearReport" type="button" class="secondary-button" disabled data-i18n="actions.forgetReport">Forget Report</button>
-          <button id="printReport" type="button" class="secondary-button" disabled data-i18n="actions.printReport">Print Report</button>
-          <button id="downloadJson" type="button" class="secondary-button" disabled data-i18n="actions.exportJson">Export JSON</button>
-          <button id="copySummary" type="button" class="primary-button" disabled data-i18n="actions.copySummary">Copy Summary</button>
+        <div class="topbar-controls">
+          <div class="utility-buttons" role="group" aria-label="View controls" data-i18n-aria-label="controls.viewControls">
+            <button class="icon-button focus-toggle" id="focusToggle" type="button" title="Toggle focus mode" aria-label="Toggle focus mode" aria-pressed="false" data-i18n-title="actions.focusToggle" data-i18n-aria-label="actions.focusToggle">
+              <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+            </button>
+            <button class="theme-toggle" id="themeToggle" type="button" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false" data-i18n="actions.darkMode" data-i18n-title="actions.switchToDarkMode" data-i18n-aria-label="actions.switchToDarkMode">Dark</button>
+          </div>
+          <div class="actions">
+            <button id="clearReport" type="button" class="secondary-button" disabled data-i18n="actions.forgetReport">Forget Report</button>
+            <button id="printReport" type="button" class="secondary-button" disabled data-i18n="actions.printReport">Print Report</button>
+            <button id="downloadJson" type="button" class="secondary-button" disabled data-i18n="actions.exportJson">Export JSON</button>
+            <button id="copySummary" type="button" class="primary-button" disabled data-i18n="actions.copySummary">Copy Summary</button>
+          </div>
         </div>
       </header>
 
