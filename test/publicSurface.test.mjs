@@ -104,6 +104,20 @@ test("topbar action buttons use a compact density", async () => {
   assert.match(css, /font-size:\s*0\.8rem/);
 });
 
+test("summary exposes crash story, collection context, and symbolication readiness", async () => {
+  const [app, messages] = await Promise.all([
+    readProjectFile("src/app.js"),
+    readProjectFile("src/i18n/en.js"),
+  ]);
+
+  assert.match(app, /renderCrashStory/);
+  assert.match(app, /renderCollectionContext/);
+  assert.match(app, /renderSymbolicationReadiness/);
+  assert.match(messages, /crashStory: "Crash Story"/);
+  assert.match(messages, /collectionContext: "Collection Context"/);
+  assert.match(messages, /symbolicationReadiness: "Symbolication Readiness"/);
+});
+
 test("exposes a printable report surface and print action", async () => {
   const [html, app, css, messages] = await Promise.all([
     readProjectFile("index.html"),

@@ -96,6 +96,23 @@ test("demystifies memory access reports with subtype, address, VM region, and re
   assert.ok(analysis.rootCause.signals.some((signal) => signal.label === "VM Region Info" && /not in any region/.test(signal.value)));
   assert.equal(analysis.rootCause.signals.filter((signal) => signal.label === "VM Region Info").length, 1);
   assert.ok(analysis.rootCause.signals.some((signal) => signal.label === "Thread State" && /pc/.test(signal.value)));
+  assert.equal(analysis.symbolication.missingImageUuids[0].uuid, "DEMO-MemoryAccessDemo");
+  assert.match(analysis.symbolication.advice, /matching dSYM/i);
+  assert.ok(analysis.crashStory.checks.some((check) => check.label === "Faulting address" && /low address/i.test(check.detail)));
+});
+
+test("classifies watchdog and OS terminations as collection-sensitive crash reports", () => {
+  const analysis = analyzeCrashReport(parseCrashReport(watchdogIps()));
+
+  assert.equal(analysis.exception.category, "Watchdog termination");
+  assert.equal(analysis.osTermination.kind, "watchdog");
+  assert.match(analysis.osTermination.summary, /20 seconds/i);
+  assert.match(analysis.rootCause.headline, /watchdog/i);
+  assert.ok(analysis.rootCause.signals.some((signal) => signal.label === "OS termination"));
+  assert.ok(analysis.recommendations.some((item) => /outside the debugger/i.test(item)));
+  assert.equal(analysis.collectionContext.primarySource, "IPS crash report");
+  assert.ok(analysis.collectionContext.relatedSources.some((source) => /not always appear in Xcode Organizer/i.test(source.detail)));
+  assert.ok(analysis.crashStory.checks.some((check) => check.label === "Termination reason" && /watchdog/i.test(check.detail)));
 });
 
 test("formats frame addresses from image base plus image offset using documented IPS mapping", () => {
@@ -109,10 +126,11 @@ test("formats frame addresses from image base plus image offset using documented
   assert.equal(formatted.symbolLocation, 172);
 });
 
-test("rejects non-crash IPS logs when bug_type is not 309", () => {
+test("rejects non-crash IPS logs with a helpful log-type explanation", () => {
   const stackshot = `{"bug_type":"288","name":"Sample"}\n{"threads":[]}`;
 
-  assert.throws(() => parseCrashReport(stackshot), /not an Apple crash report/);
+  assert.throws(() => parseCrashReport(stackshot), /stackshot/i);
+  assert.throws(() => parseCrashReport(stackshot), /CrashPad currently analyzes bug_type 309/i);
 });
 
 test("rejects binary alias/bookmark files as unsupported input", () => {
@@ -271,6 +289,35 @@ function memoryAccessIps() {
         image("MemoryAccessDemo", "/Users/example/MemoryAccessDemo.app/MemoryAccessDemo", 4294967296),
         image("dyld", "/usr/lib/dyld", 6442450944),
         image("Combine", "/System/Library/Frameworks/Combine.framework/Combine", 5368709120),
+      ],
+    }),
+  );
+}
+
+function watchdogIps() {
+  return ips(
+    { name: "SlowLaunchDemo", bundleID: "com.example.SlowLaunchDemo", platform: 2, incident_id: "DEMO-WATCHDOG" },
+    baseReport({
+      procName: "SlowLaunchDemo",
+      bundleId: "com.example.SlowLaunchDemo",
+      procPath: "/private/var/containers/Bundle/Application/DEMO/SlowLaunchDemo.app/SlowLaunchDemo",
+      procLaunch: "2026-05-31 11:59:40.0000 -0700",
+      captureTime: "2026-05-31 12:00:00.0000 -0700",
+      exception: { codes: "0x0000000000000000, 0x0000000000000000", rawCodes: [0, 0], type: "EXC_CRASH", signal: "SIGKILL" },
+      termination: { flags: 0, code: 2343432205, namespace: "SPRINGBOARD", indicator: "scene-create watchdog transgression: exhausted real (wall clock) time allowance of 20.00 seconds" },
+      faultingThread: 0,
+      threads: [{
+        id: 5000,
+        triggered: true,
+        queue: "com.apple.main-thread",
+        frames: [
+          { imageIndex: 0, imageOffset: 12000, symbol: "SlowLaunchDemo.AppDelegate.application(_:didFinishLaunchingWithOptions:)", symbolLocation: 80 },
+          { imageIndex: 1, imageOffset: 4096, symbol: "UIApplicationMain", symbolLocation: 340 },
+        ],
+      }],
+      usedImages: [
+        image("SlowLaunchDemo", "/private/var/containers/Bundle/Application/DEMO/SlowLaunchDemo.app/SlowLaunchDemo", 4294967296),
+        image("UIKitCore", "/System/Library/PrivateFrameworks/UIKitCore.framework/UIKitCore", 5368709120),
       ],
     }),
   );

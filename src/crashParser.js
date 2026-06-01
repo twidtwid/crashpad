@@ -58,14 +58,17 @@ export function analyzeCrashReport(parsed) {
   const crashedFrames = (crashedThread?.frames ?? []).map((frame) => formatFrame(frame, usedImages));
   const lastExceptionFrames = (report.lastExceptionBacktrace ?? []).map((frame) => formatFrame(frame, usedImages));
   const diagnostics = collectDiagnostics(report);
-  const exception = normalizeException(report, diagnostics, crashedFrames, lastExceptionFrames);
+  const osTermination = classifyOsTermination(report);
+  const exception = normalizeException(report, diagnostics, crashedFrames, lastExceptionFrames, osTermination);
   const runtimeSeconds = runtimeDurationSeconds(report.procLaunch, report.captureTime);
   const identity = normalizeIdentity(report, metadata);
   const environment = normalizeEnvironment(report, metadata);
   const binarySummary = summarizeBinaryImages(usedImages, report);
-  const symbolication = summarizeSymbolication(crashedFrames, lastExceptionFrames);
-  const hypothesis = buildHypothesis(exception, crashedFrames, lastExceptionFrames, diagnostics, identity);
-  const rootCause = buildRootCauseGuide(report, exception, crashedThread, crashedFrames, lastExceptionFrames, diagnostics, identity);
+  const symbolication = summarizeSymbolication(crashedFrames, lastExceptionFrames, usedImages);
+  const collectionContext = buildCollectionContext(parsed, report, metadata, osTermination);
+  const crashStory = buildCrashStory(report, exception, crashedThread, crashedFrames, lastExceptionFrames, diagnostics, symbolication, osTermination);
+  const hypothesis = buildHypothesis(exception, crashedFrames, lastExceptionFrames, diagnostics, identity, osTermination);
+  const rootCause = buildRootCauseGuide(report, exception, crashedThread, crashedFrames, lastExceptionFrames, diagnostics, identity, osTermination);
 
   return {
     kind: parsed.kind,
@@ -74,10 +77,13 @@ export function analyzeCrashReport(parsed) {
     environment,
     runtimeSeconds,
     exception,
+    osTermination,
     diagnostics,
     hypothesis,
     rootCause,
-    recommendations: buildRecommendations(exception, crashedFrames, lastExceptionFrames, diagnostics, symbolication, identity),
+    crashStory,
+    collectionContext,
+    recommendations: buildRecommendations(exception, crashedFrames, lastExceptionFrames, diagnostics, symbolication, identity, osTermination),
     crashedThread: {
       index: faultingThreadIndex,
       id: crashedThread?.id ?? faultingThreadIndex,
@@ -134,7 +140,7 @@ function parseIpsJson(text, options) {
 
   const logType = String(metadata.bug_type ?? "");
   if (logType !== "309") {
-    throw new UnsupportedFormatError(`Log type ${logType || "(unknown)"} is not an Apple crash report (bug_type 309).`);
+    throw new UnsupportedFormatError(`Log type ${logType || "(unknown)"} is ${ipsLogTypeDescription(logType)}, not an Apple crash report. CrashPad currently analyzes bug_type 309 Apple crash reports; use this file as related diagnostic context.`);
   }
 
   try {
@@ -149,6 +155,13 @@ function parseIpsJson(text, options) {
     metadata,
     report,
   };
+}
+
+function ipsLogTypeDescription(logType) {
+  if (logType === "288") return "a stackshot diagnostic log";
+  if (logType === "298") return "a resource or memory-pressure diagnostic log";
+  if (logType === "309") return "an Apple crash report";
+  return `an Apple diagnostic log type ${logType || "(unknown)"}`;
 }
 
 function parseLegacyTextCrash(text, options) {
@@ -346,10 +359,10 @@ function normalizeEnvironment(report, metadata) {
   };
 }
 
-function normalizeException(report, diagnostics, crashedFrames, lastExceptionFrames) {
+function normalizeException(report, diagnostics, crashedFrames, lastExceptionFrames, osTermination) {
   const exception = report.exception ?? {};
   const termination = report.termination ?? {};
-  const category = exceptionCategory(exception, termination, diagnostics, crashedFrames, lastExceptionFrames);
+  const category = exceptionCategory(exception, termination, diagnostics, crashedFrames, lastExceptionFrames, osTermination);
 
   return {
     type: exception.type ?? "",
@@ -367,7 +380,7 @@ function normalizeException(report, diagnostics, crashedFrames, lastExceptionFra
   };
 }
 
-function exceptionCategory(exception, termination, diagnostics, crashedFrames, lastExceptionFrames) {
+function exceptionCategory(exception, termination, diagnostics, crashedFrames, lastExceptionFrames, osTermination) {
   const type = exception.type ?? "";
   const signal = exception.signal ?? "";
   const topSymbol = crashedFrames[0]?.symbol ?? "";
@@ -375,6 +388,7 @@ function exceptionCategory(exception, termination, diagnostics, crashedFrames, l
   if (type === "EXC_BAD_ACCESS" || /SIGSEGV|SIGBUS/.test(signal)) return "Memory access";
   if (type === "EXC_RESOURCE") return "Resource policy";
   if (type === "EXC_GUARD") return "Guard violation";
+  if (osTermination.kind) return osTermination.label;
   if (type === "EXC_CRASH" && (signal === "SIGABRT" || lastExceptionFrames.length || diagnostics.some((item) => /abort\(\)|exception/i.test(item.message)))) {
     return "Abort / language exception";
   }
@@ -405,7 +419,190 @@ function collectDiagnostics(report) {
   return diagnostics;
 }
 
-function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, lastExceptionFrames, diagnostics, identity) {
+function classifyOsTermination(report = {}) {
+  const termination = report.termination ?? {};
+  const exception = report.exception ?? {};
+  const namespace = String(termination.namespace ?? "").toUpperCase();
+  const codeHex = Number.isFinite(Number(termination.code)) ? hex(termination.code) : String(termination.code ?? "");
+  const indicator = String(termination.indicator ?? "");
+  const message = String(exception.message ?? "");
+  const combined = [namespace, codeHex, indicator, message, exception.type, exception.signal].filter(Boolean).join(" ");
+
+  if (/8badf00d/i.test(codeHex) || ((namespace === "SPRINGBOARD" || namespace === "FRONTBOARD") && /watchdog|exhausted.*time|scene|launch|resume|suspend/i.test(combined))) {
+    return {
+      kind: "watchdog",
+      label: "Watchdog termination",
+      summary: watchdogSummary(namespace, indicator),
+      advice: "Use lifecycle timing rather than only frame 0: look at launch/resume/scene/background work, especially synchronous main-thread I/O and waits.",
+    };
+  }
+
+  if (/JETSAM|memory pressure|highwater|per-process-limit/i.test(combined)) {
+    return {
+      kind: "jetsam",
+      label: "Memory pressure termination",
+      summary: "The OS appears to have killed the process under memory pressure rather than because one thread threw a language or CPU exception.",
+      advice: "Correlate with memory footprint, MetricKit memory diagnostics, and nearby jetsam logs before treating the crashed thread as the sole cause.",
+    };
+  }
+
+  if (/THERMAL|thermal/i.test(combined)) {
+    return {
+      kind: "thermal",
+      label: "Thermal termination",
+      summary: "The OS appears to have ended the process because the device was under thermal pressure.",
+      advice: "Correlate with device conditions, CPU/GPU activity, and MetricKit diagnostics.",
+    };
+  }
+
+  if (/CODESIGN|code signature|invalid signature/i.test(combined)) {
+    return {
+      kind: "code-signature",
+      label: "Code signature termination",
+      summary: "The OS appears to have ended the process because code signing or executable validation failed.",
+      advice: "Check the app bundle, embedded frameworks, entitlements, provisioning, and distribution channel before debugging app logic.",
+    };
+  }
+
+  if (namespace === "DYLD") {
+    return {
+      kind: "dyld",
+      label: "Dynamic linker termination",
+      summary: "The dynamic linker ended the process while loading code or resolving a dependency.",
+      advice: "Inspect missing libraries, incompatible symbols, install names, and deployment-target mismatches.",
+    };
+  }
+
+  if (namespace && namespace !== "SIGNAL") {
+    return {
+      kind: "os",
+      label: `${namespace} termination`,
+      summary: `The ${namespace} subsystem recorded the process exit reason.`,
+      advice: "Use the termination namespace and message to scope the OS subsystem before changing app code.",
+    };
+  }
+
+  return {
+    kind: "",
+    label: "",
+    summary: "",
+    advice: "",
+  };
+}
+
+function watchdogSummary(namespace, indicator) {
+  const seconds = /(\d+(?:\.\d+)?)\s*seconds?/i.exec(indicator)?.[1];
+  const budget = seconds ? ` after it exceeded a ${formatSeconds(Number(seconds))} wall-clock allowance` : "";
+  return `${namespace || "The OS"} watchdog killed the app${budget}. The stack shows what was running when the watchdog fired, not every operation that contributed to the timeout.`;
+}
+
+function formatSeconds(seconds) {
+  if (!Number.isFinite(seconds)) return "time";
+  const rendered = Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+  return `${rendered} seconds`;
+}
+
+function buildCollectionContext(parsed, report, metadata, osTermination) {
+  const primarySource = parsed.kind === "legacy-text" ? "Legacy text crash report" : "IPS crash report";
+  const relatedSources = [
+    {
+      label: "Xcode Devices and Simulators",
+      detail: "Use local device logs and direct symbolication when reproducing or when a user provides raw diagnostics from a device.",
+    },
+    {
+      label: "Xcode Crashes Organizer",
+      detail: osTermination.kind
+        ? "Organizer is useful for App Store and TestFlight crash aggregation, but watchdog, jetsam, thermal, invalid code signature, and other OS termination reports may not always appear in Xcode Organizer."
+        : "Organizer is useful for App Store and TestFlight crash aggregation when users share diagnostics and matching symbols are available.",
+    },
+    {
+      label: "MetricKit",
+      detail: "MetricKit payloads can corroborate crashes with hang, launch, CPU exception, disk write, memory, and signpost diagnostics collected by the app.",
+    },
+  ];
+
+  return {
+    primarySource,
+    bugType: String(metadata.bug_type ?? ""),
+    incident: report.incident ?? metadata.incident_id ?? "",
+    summary: "Read the source and related diagnostics together: crash reports show the stop point, while logs and metrics often explain the path that led there.",
+    relatedSources,
+  };
+}
+
+function buildCrashStory(report, exception, crashedThread, crashedFrames, lastExceptionFrames, diagnostics, symbolication, osTermination) {
+  const checks = [];
+  const mechanism = [exception.type, exception.signal ? `(${exception.signal})` : ""].filter(Boolean).join(" ") || "Unknown exception";
+  const topFrame = crashedFrames[0] ?? null;
+
+  checks.push({
+    label: "Crash mechanism",
+    status: "mechanism",
+    detail: `${mechanism} explains how the process stopped. Treat it as the mechanism first, then use termination, diagnostics, and frames to infer cause.`,
+  });
+
+  if (osTermination.kind) {
+    checks.push({
+      label: "Termination reason",
+      status: "important",
+      detail: `${osTermination.label}: ${osTermination.summary}`,
+    });
+  } else if (exception.terminationNamespace) {
+    checks.push({
+      label: "Termination reason",
+      status: "present",
+      detail: `${exception.terminationNamespace} ${exception.terminationCodeHex || exception.terminationCode || ""} ${exception.terminationIndicator || ""}`.trim(),
+    });
+  }
+
+  if (lastExceptionFrames.length) {
+    const throwFrame = firstInterestingFrame(lastExceptionFrames) ?? lastExceptionFrames[0];
+    checks.push({
+      label: "Primary stack",
+      status: "strong",
+      detail: `Last Exception Backtrace is present; use ${frameSummary(throwFrame)} before focusing on abort or pthread frames.`,
+    });
+  } else {
+    checks.push({
+      label: "Primary stack",
+      status: topFrame ? "present" : "missing",
+      detail: topFrame ? `Triggered thread ${threadLabel(crashedThread, report.faultingThread) || "0"} starts at ${frameSummary(topFrame)}.` : "No crashed-thread frames were present.",
+    });
+  }
+
+  if (exception.category === "Memory access") {
+    const address = exceptionAddress(report.exception ?? {});
+    if (address) {
+      checks.push({
+        label: "Faulting address",
+        status: isVeryLowAddress(address) ? "important" : "present",
+        detail: `${address}${isVeryLowAddress(address) ? " is a low address, which often indicates a nil or near-nil dereference." : " is the address reported by the exception subtype or raw exception codes."}`,
+      });
+    }
+  }
+
+  const diagnostic = diagnostics.find((item) => item.source !== "VM Region Info") ?? diagnostics[0];
+  if (diagnostic) {
+    checks.push({
+      label: diagnostic.source,
+      status: "context",
+      detail: truncateMiddle(diagnostic.message, 220),
+    });
+  }
+
+  checks.push({
+    label: "Symbolication",
+    status: symbolication.fullySymbolicated ? "ready" : "needs dSYM",
+    detail: symbolication.advice,
+  });
+
+  return {
+    verdict: checks.map((check) => check.detail).slice(0, 3).join(" "),
+    checks,
+  };
+}
+
+function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, lastExceptionFrames, diagnostics, identity, osTermination) {
   const signals = [];
   const mechanism = [exception.type, exception.signal ? `(${exception.signal})` : ""].filter(Boolean).join(" ") || "Unknown exception";
   const termination = [exception.terminationNamespace, exception.terminationCodeHex || exception.terminationCode, exception.terminationIndicator]
@@ -458,6 +655,29 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       headline: "Not a normal app crash: simulated fault report",
       confidence: "high",
       summary: `${identity.process || "The process"} is marked SIMULATED. Treat this as an OS- or subsystem-generated fault report rather than a straightforward app crash; ${termination || mechanism} is the strongest scope clue.`,
+      primaryFrame: frameSummary(topFrame),
+      signals,
+    };
+  }
+
+  if (osTermination.kind) {
+    signals.push({
+      label: "OS termination",
+      value: osTermination.label,
+      meaning: osTermination.summary,
+    });
+    if (osTermination.advice) {
+      signals.push({
+        label: "Collection clue",
+        value: osTermination.advice,
+        meaning: "OS-enforced exits often need lifecycle timing, device logs, and MetricKit context in addition to the crashed-thread stack.",
+      });
+    }
+
+    return {
+      headline: osTermination.label,
+      confidence: osTermination.kind === "watchdog" ? "high" : "medium",
+      summary: `${osTermination.summary} ${osTermination.advice}`.trim(),
       primaryFrame: frameSummary(topFrame),
       signals,
     };
@@ -560,9 +780,13 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
   };
 }
 
-function buildHypothesis(exception, crashedFrames, lastExceptionFrames, diagnostics, identity) {
+function buildHypothesis(exception, crashedFrames, lastExceptionFrames, diagnostics, identity, osTermination) {
   const top = crashedFrames[0];
   const lastInteresting = firstInterestingFrame(lastExceptionFrames);
+
+  if (osTermination.kind) {
+    return `${osTermination.label}: ${osTermination.summary} ${osTermination.advice}`.trim();
+  }
 
   if (exception.category === "Abort / language exception" && lastExceptionFrames.length) {
     const pointer = lastInteresting ? `${lastInteresting.symbol} in ${lastInteresting.imageName}` : "the Last Exception Backtrace";
@@ -588,11 +812,18 @@ function buildHypothesis(exception, crashedFrames, lastExceptionFrames, diagnost
   return `The report identifies ${identity.process || "the process"} terminating with ${exception.type || exception.signal || "an unknown exception"}. Start with the crashed thread and compare it with any related non-crashed threads.`;
 }
 
-function buildRecommendations(exception, crashedFrames, lastExceptionFrames, diagnostics, symbolication, identity) {
+function buildRecommendations(exception, crashedFrames, lastExceptionFrames, diagnostics, symbolication, identity, osTermination) {
   const items = [];
 
   if (!symbolication.fullySymbolicated) {
     items.push("Symbolicate the report with the matching dSYM/archive before drawing final conclusions.");
+  }
+
+  if (osTermination.kind === "watchdog") {
+    items.push("Reproduce the launch, scene, foreground, background, or resume path outside the debugger; the watchdog budget changes when a debugger is attached.");
+    items.push("Measure main-thread work around the lifecycle event named by the termination indicator and move blocking I/O or synchronous waits off that path.");
+  } else if (osTermination.kind) {
+    items.push(`Treat this as an OS-enforced ${osTermination.label.toLowerCase()}; collect matching device logs, MetricKit diagnostics, and user actions before assigning the cause to app code.`);
   }
 
   if (exception.category === "Abort / language exception") {
@@ -655,13 +886,27 @@ function summarizeBinaryImages(images, report) {
   return { counts, interesting: dedupeImages(interesting).slice(0, 24) };
 }
 
-function summarizeSymbolication(crashedFrames, lastExceptionFrames) {
+function summarizeSymbolication(crashedFrames, lastExceptionFrames, usedImages) {
   const frames = [...crashedFrames, ...lastExceptionFrames];
   const unsymbolicated = frames.filter((frame) => !frame.symbol || frame.symbol === "<unsymbolicated>");
+  const missingImageUuids = dedupeImages(unsymbolicated.map((frame) => {
+    const image = usedImages[frame.imageIndex] ?? {};
+    return {
+      name: frame.imageName || image.name || baseName(image.path) || "Unknown image",
+      identifier: image.CFBundleIdentifier ?? frame.imageIdentifier ?? "",
+      uuid: image.uuid ?? "",
+      arch: image.arch ?? "",
+      path: image.path ?? frame.imagePath ?? "",
+    };
+  })).filter((image) => image.uuid || image.name || image.path);
   return {
     totalFramesChecked: frames.length,
     unsymbolicatedFrames: unsymbolicated.length,
     fullySymbolicated: frames.length > 0 && unsymbolicated.length === 0,
+    missingImageUuids,
+    advice: missingImageUuids.length
+      ? "Find the matching dSYM or archived build for each listed image UUID, then re-symbolicate before relying on exact frame names."
+      : "Checked crash and last-exception stacks already include symbol names.",
   };
 }
 

@@ -419,6 +419,9 @@ function renderSummary() {
       </section>
 
       ${renderRootCauseGuide(analysis.rootCause)}
+      ${renderCrashStory(analysis.crashStory)}
+      ${renderSymbolicationReadiness(analysis.symbolication)}
+      ${renderCollectionContext(analysis.collectionContext)}
 
       <section class="panel">
         <h3 class="section-title">${escapeHtml(t("report.summary.environment"))}</h3>
@@ -489,6 +492,25 @@ function renderSummary() {
   `;
 }
 
+function renderCrashStory(crashStory) {
+  if (!crashStory?.checks?.length) return "";
+
+  return `
+    <section class="panel">
+      <h3 class="section-title">${escapeHtml(t("report.summary.crashStory"))}</h3>
+      ${crashStory.verdict ? `<p class="panel-intro">${highlight(crashStory.verdict)}</p>` : ""}
+      <ul class="diagnostic-list">
+        ${crashStory.checks.map((check) => `
+          <li>
+            <strong>${highlight(check.label)}${check.status ? ` · ${highlight(check.status)}` : ""}</strong>
+            ${highlight(check.detail)}
+          </li>
+        `).join("")}
+      </ul>
+    </section>
+  `;
+}
+
 function renderRootCauseGuide(rootCause) {
   if (!rootCause) return "";
 
@@ -509,6 +531,58 @@ function renderRootCauseGuide(rootCause) {
           </article>
         `).join("")}
       </div>
+    </section>
+  `;
+}
+
+function renderSymbolicationReadiness(symbolication) {
+  if (!symbolication) return "";
+  const missingImages = symbolication.missingImageUuids ?? [];
+
+  return `
+    <section class="panel">
+      <h3 class="section-title">${escapeHtml(t("report.summary.symbolicationReadiness"))}</h3>
+      ${definitionList([
+        [t("report.fields.symbolicationStatus"), symbolication.fullySymbolicated ? t("report.fields.ready") : t("report.fields.needsDsym")],
+        [t("report.fields.checkedFrames"), String(symbolication.totalFramesChecked ?? 0)],
+        [t("report.fields.unsymbolicatedFrames"), String(symbolication.unsymbolicatedFrames ?? 0)],
+        [t("report.fields.symbolicationAdvice"), symbolication.advice],
+      ])}
+      ${missingImages.length ? `
+        <ul class="diagnostic-list compact-list">
+          ${missingImages.map((image) => `
+            <li>
+              <strong>${highlight(image.name || t("report.copy.unknownImage"))}</strong>
+              <span class="mono">${highlight([image.uuid, image.arch, image.path].filter(Boolean).join(" · "))}</span>
+            </li>
+          `).join("")}
+        </ul>
+      ` : `<p class="muted panel-note">${escapeHtml(t("report.fields.noMissingDsyms"))}</p>`}
+    </section>
+  `;
+}
+
+function renderCollectionContext(context) {
+  if (!context) return "";
+
+  return `
+    <section class="panel">
+      <h3 class="section-title">${escapeHtml(t("report.summary.collectionContext"))}</h3>
+      <p class="panel-intro">${highlight(context.summary || "")}</p>
+      ${definitionList([
+        [t("report.fields.primarySource"), context.primarySource],
+        [t("report.fields.bugType"), context.bugType],
+        [t("report.fields.incident"), context.incident],
+      ])}
+      <h4 class="subsection-title">${escapeHtml(t("report.summary.relatedSources"))}</h4>
+      <ul class="diagnostic-list compact-list">
+        ${(context.relatedSources ?? []).map((source) => `
+          <li>
+            <strong>${highlight(source.label)}</strong>
+            ${highlight(source.detail)}
+          </li>
+        `).join("")}
+      </ul>
     </section>
   `;
 }
