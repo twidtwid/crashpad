@@ -104,7 +104,7 @@ export const messages = {
     lastUpdated: "Last updated {timestamp}",
     notRecorded: "No events recorded yet.",
     successRate: "Analysis Success Rate",
-    sparklineLabel: "over the last 7 days",
+    sparklineLabel: "since stats started",
     peak: "{value} peak",
     eventDescriptions: {
       page_view: "Analyzer page visits.",
@@ -117,6 +117,17 @@ export const messages = {
       print_opened: "Print Report actions.",
       analysis_success_rate: "Successful analyses divided by successful analyses plus parse failures.",
       local_actions: "Copy, export, and print actions initiated in the browser.",
+    },
+    cardSubtitles: {
+      page_view: "page loads",
+      report_analyzed: "successful parses",
+      browser_report_analyzed: "opened in this tab",
+      sample_report_analyzed: "QLThumbnail example",
+      parse_error: "failed parses",
+      summary_copied: "clipboard actions",
+      json_export: "local downloads",
+      print_opened: "print dialogs",
+      analysis_success_rate: "successful / attempted",
     },
     events: {
       page_view: "Visits",
@@ -131,8 +142,8 @@ export const messages = {
     charts: {
       dailyActivity: {
         title: "Daily Activity",
-        description: "Last 7 days of real aggregate visits, successful analyses, and parse failures.",
-        ariaLabel: "Last 7 days of visits, crashes analyzed, and parse failures",
+        description: "Real aggregate visits, successful analyses, and parse failures since stats started.",
+        ariaLabel: "Visits, crashes analyzed, and parse failures since stats started",
       },
     },
   },

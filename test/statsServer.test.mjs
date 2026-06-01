@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -63,6 +63,35 @@ test("stats API records only public aggregate counters", async (t) => {
   assert.doesNotMatch(rawStatsFile, /SecretCustomerCrash|do not persist|userAgent|contents/i);
 });
 
+test("stats API treats same-day legacy totals as today's daily bucket", async (t) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const { baseUrl } = await startCrashPadServer(t, {
+    startedAt: `${today}T08:00:00.000Z`,
+    updatedAt: `${today}T09:00:00.000Z`,
+    totals: {
+      page_view: 14,
+      report_analyzed: 5,
+      sample_report_analyzed: 5,
+      parse_error: 0,
+    },
+    daily: {
+      [today]: {
+        page_view: 1,
+      },
+    },
+  });
+
+  const statsResponse = await fetch(`${baseUrl}/api/stats`);
+  assert.equal(statsResponse.status, 200);
+  const stats = await statsResponse.json();
+  const todayStats = stats.daily.find((row) => row.date === today);
+
+  assert.equal(todayStats.totals.page_view, 14);
+  assert.equal(todayStats.totals.report_analyzed, 5);
+  assert.equal(todayStats.totals.sample_report_analyzed, 5);
+  assert.equal(todayStats.totals.parse_error, 0);
+});
+
 async function postStat(baseUrl, body) {
   return fetch(`${baseUrl}/api/stats/event`, {
     method: "POST",
@@ -71,10 +100,11 @@ async function postStat(baseUrl, body) {
   });
 }
 
-async function startCrashPadServer(t) {
+async function startCrashPadServer(t, initialStats = null) {
   const port = await freePort();
   const statsDir = await mkdtemp(path.join(tmpdir(), "crashpad-stats-"));
   const statsPath = path.join(statsDir, "stats.json");
+  if (initialStats) await writeFile(statsPath, `${JSON.stringify(initialStats, null, 2)}\n`);
   const child = spawn(process.execPath, ["scripts/server.js"], {
     cwd: root,
     env: {

@@ -52,10 +52,10 @@ cd /home/sprite/crashpad
 tar -xzf /tmp/crashpad-sprite.tar.gz
 ps -eo pid=,comm=,args= |
   awk "\$2 == \"node\" && /scripts\\/server[.]js/ { print \$1 }
-       \$2 == \"npm\" && /npm start/ { print \$1 }" |
+       \$2 == \"npm\" && \$3 == \"start\" { print \$1 }" |
   xargs -r kill || true
 sleep 1
-nohup npm start >/tmp/crashpad.log 2>&1 &
+HOST=0.0.0.0 PORT=8080 nohup npm start >/tmp/crashpad.log 2>&1 &
 for attempt in 1 2 3 4 5; do
   curl -fsS http://127.0.0.1:8080/ >/dev/null && exit 0
   sleep 1

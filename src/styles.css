@@ -944,7 +944,9 @@ tr:last-child td {
 }
 
 .stats-page {
-  max-width: 1180px;
+  max-width: 1680px;
+  padding-left: clamp(18px, 2vw, 28px);
+  padding-right: clamp(18px, 2vw, 28px);
 }
 
 .stats-status {
@@ -955,8 +957,8 @@ tr:last-child td {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 16px;
 }
 
 .stats-section-title {
@@ -1005,9 +1007,12 @@ tr:last-child td {
   stroke-linecap: round;
 }
 
-.daily-area,
-.sparkline-area {
+.daily-area {
   opacity: 0.16;
+}
+
+.sparkline-area {
+  stroke: none;
 }
 
 .daily-line,
@@ -1020,14 +1025,11 @@ tr:last-child td {
 
 .sparkline-line {
   stroke-width: 3;
+  stroke: currentColor;
 }
 
 .daily-area.accent,
 .daily-line.accent,
-.sparkline-area.accent,
-.sparkline-line.accent,
-.chart-dot.accent,
-.sparkline-dot.accent,
 .chart-legend-dot.accent {
   stroke: var(--accent);
   fill: var(--accent);
@@ -1035,10 +1037,6 @@ tr:last-child td {
 
 .daily-area.success,
 .daily-line.success,
-.sparkline-area.success,
-.sparkline-line.success,
-.chart-dot.success,
-.sparkline-dot.success,
 .chart-legend-dot.success {
   stroke: var(--success);
   fill: var(--success);
@@ -1046,10 +1044,6 @@ tr:last-child td {
 
 .daily-area.warn,
 .daily-line.warn,
-.sparkline-area.warn,
-.sparkline-line.warn,
-.chart-dot.warn,
-.sparkline-dot.warn,
 .chart-legend-dot.warn {
   stroke: var(--warn);
   fill: var(--warn);
@@ -1057,23 +1051,9 @@ tr:last-child td {
 
 .daily-area.danger,
 .daily-line.danger,
-.sparkline-area.danger,
-.sparkline-line.danger,
-.chart-dot.danger,
-.sparkline-dot.danger,
 .chart-legend-dot.danger {
   stroke: var(--danger);
   fill: var(--danger);
-}
-
-.chart-dot,
-.sparkline-dot {
-  stroke: var(--surface);
-  stroke-width: 3;
-}
-
-.sparkline-dot {
-  stroke-width: 2;
 }
 
 .daily-axis {
@@ -1110,85 +1090,66 @@ tr:last-child td {
 }
 
 .stat-card {
-  display: grid;
-  gap: 7px;
-  min-width: 0;
-  border: 1px solid var(--rule);
-  border-radius: 7px;
-  background: var(--surface);
-  padding: 12px;
-}
-
-.stat-card-head {
   display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 158px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 16px 18px 12px;
 }
 
-.stat-card-icon {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  border-radius: 8px;
-  background: var(--accent-soft);
+.stat-card[data-tone="accent"] .stat-card-value,
+.stat-card[data-tone="accent"] .stat-card-spark {
   color: var(--accent);
 }
 
-.stat-card-icon::before {
-  content: "";
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: currentColor;
-}
-
-.stat-card[data-event="report_analyzed"] .stat-card-icon,
-.stat-card[data-event="browser_report_analyzed"] .stat-card-icon,
-.stat-card[data-event="sample_report_analyzed"] .stat-card-icon,
-.stat-card[data-event="analysis_success_rate"] .stat-card-icon {
-  background: var(--success-soft);
+.stat-card[data-tone="success"] .stat-card-value,
+.stat-card[data-tone="success"] .stat-card-spark {
   color: var(--success);
 }
 
-.stat-card[data-event="parse_error"] .stat-card-icon {
-  background: var(--danger-soft);
+.stat-card[data-tone="danger"] .stat-card-value,
+.stat-card[data-tone="danger"] .stat-card-spark {
   color: var(--danger);
 }
 
-.stat-card[data-event="json_export"] .stat-card-icon,
-.stat-card[data-event="summary_copied"] .stat-card-icon,
-.stat-card[data-event="print_opened"] .stat-card-icon {
-  background: var(--warn-soft);
+.stat-card[data-tone="warn"] .stat-card-value,
+.stat-card[data-tone="warn"] .stat-card-spark {
   color: var(--warn);
 }
 
-.stat-card strong {
-  color: var(--ink);
-  font: 700 1.75rem/1 var(--font-serif);
+.stat-card-value {
+  font: 650 2.45rem/1.05 var(--font-sans);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
 }
 
-.stat-card p {
-  margin: 0;
+.stat-card-sub {
   color: var(--muted);
-  font-size: 0.84rem;
-  line-height: 1.45;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.stat-card-spark {
+  height: 48px;
+  margin: auto -6px 0;
 }
 
 .sparkline {
   display: block;
   width: 100%;
-  height: 48px;
-  margin-top: 2px;
-  overflow: visible;
+  height: 100%;
 }
 
-.stat-label {
+.stat-card-label {
   color: var(--muted);
-  font: 0.7rem/1.3 var(--font-mono);
-  letter-spacing: 0.05em;
+  font: 650 0.76rem/1.3 var(--font-sans);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 

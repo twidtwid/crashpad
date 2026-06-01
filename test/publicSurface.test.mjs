@@ -83,6 +83,7 @@ test("stats page exposes public aggregate analytics", async () => {
   assert.match(statsJs, /fetch\("\/api\/stats"\)/);
   assert.match(statsJs, /renderCharts/);
   assert.match(statsJs, /buildDailySeries/);
+  assert.match(statsJs, /stats\?\.startedAt/);
   assert.match(statsJs, /renderDailyChart/);
   assert.match(statsJs, /class="sparkline"/);
   assert.match(statsJs, /class="sparkline-area/);
@@ -90,8 +91,10 @@ test("stats page exposes public aggregate analytics", async () => {
   assert.match(statsJs, /class="daily-chart-card"/);
   assert.match(statsJs, /role="img"/);
   assert.doesNotMatch(statsJs, /class="bar-chart"|class="bar-row"|class="bar-track"/);
-  assert.match(statsJs, /class="stat-card-head"/);
-  assert.match(statsJs, /class="stat-card-icon"/);
+  assert.match(statsJs, /class="stat-card-label"/);
+  assert.match(statsJs, /class="stat-card-value"/);
+  assert.match(statsJs, /class="stat-card-sub"/);
+  assert.match(statsJs, /class="stat-card-spark"/);
   assert.match(statsJs, /data-event="\$\{escapeAttr\(eventName\)\}"/);
   assert.match(statsJs, /page_view/);
   assert.match(statsJs, /report_analyzed/);

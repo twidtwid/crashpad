@@ -36,19 +36,19 @@ async function loadStats() {
 
 function renderStats(stats) {
   const totals = stats?.totals ?? {};
-  const dailySeries = buildDailySeries(stats?.daily ?? []);
+  const dailySeries = buildDailySeries(stats?.daily ?? [], stats?.startedAt);
   const cards = EVENT_KEYS.map((eventName) => statCard(
     eventName,
     t(`stats.events.${eventName}`),
     formatNumber(totals[eventName]),
-    t(`stats.eventDescriptions.${eventName}`),
+    t(`stats.cardSubtitles.${eventName}`),
     sparkline(eventName, dailySeries, t(`stats.events.${eventName}`)),
   ));
   cards.push(statCard(
     "analysis_success_rate",
     t("stats.successRate"),
     formatPercent(successRate(totals)),
-    t("stats.eventDescriptions.analysis_success_rate"),
+    t("stats.cardSubtitles.analysis_success_rate"),
     sparkline("analysis_success_rate", dailySeries, t("stats.successRate")),
   ));
 
@@ -76,6 +76,7 @@ function renderDailyChart(dailySeries) {
   const failurePoints = linePoints(failures, width, height, padding, max);
   const startDate = dailySeries[0]?.label ?? "";
   const endDate = dailySeries.at(-1)?.label ?? "";
+  const axis = axisLabels(startDate, endDate);
 
   return `
     <article class="daily-chart-card">
@@ -91,13 +92,9 @@ function renderDailyChart(dailySeries) {
         <path class="daily-line accent" d="${escapeAttr(linePath(visitPoints))}"></path>
         <path class="daily-line success" d="${escapeAttr(linePath(analyzedPoints))}"></path>
         <path class="daily-line danger" d="${escapeAttr(linePath(failurePoints))}"></path>
-        ${pointMarkers(visitPoints, "accent")}
-        ${pointMarkers(analyzedPoints, "success")}
-        ${pointMarkers(failurePoints, "danger")}
       </svg>
       <div class="daily-axis" aria-hidden="true">
-        <span>${escapeHtml(startDate)}</span>
-        <span>${escapeHtml(endDate)}</span>
+        ${axis.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
       </div>
       <div class="chart-legend">
         ${legendItem("accent", t("stats.events.page_view"), maxValue(visits))}
@@ -108,15 +105,13 @@ function renderDailyChart(dailySeries) {
   `;
 }
 
-function statCard(eventName, label, value, description, trend) {
+function statCard(eventName, label, value, subtitle, trend) {
+  const tone = toneForEvent(eventName);
   return `
-    <article class="stat-card" data-event="${escapeAttr(eventName)}">
-      <div class="stat-card-head">
-        <span class="stat-label">${escapeHtml(label)}</span>
-        <span class="stat-card-icon" aria-hidden="true"></span>
-      </div>
-      <strong>${escapeHtml(value)}</strong>
-      <p>${escapeHtml(description)}</p>
+    <article class="stat-card" data-event="${escapeAttr(eventName)}" data-tone="${escapeAttr(tone)}">
+      <div class="stat-card-label">${escapeHtml(label)}</div>
+      <div class="stat-card-value">${escapeHtml(value)}</div>
+      <div class="stat-card-sub">${escapeHtml(subtitle)}</div>
       ${trend}
     </article>
   `;
@@ -135,26 +130,32 @@ function sparkline(eventName, dailySeries, label) {
   const padding = 4;
   const max = maxSeriesValue(values);
   const points = linePoints(values, width, height, padding, max);
+  const tone = toneForEvent(eventName);
+  const gradientId = `spark-${eventName.replaceAll("_", "-")}`;
   return `
-    <svg class="sparkline" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeAttr(label)} ${escapeAttr(t("stats.sparklineLabel"))}" preserveAspectRatio="none">
-      <path class="sparkline-area ${escapeAttr(toneForEvent(eventName))}" d="${escapeAttr(areaPath(points, height, padding))}"></path>
-      <path class="sparkline-line ${escapeAttr(toneForEvent(eventName))}" d="${escapeAttr(linePath(points))}"></path>
-      ${pointMarkers(points, toneForEvent(eventName), "sparkline-dot")}
-    </svg>
+    <div class="stat-card-spark" aria-label="${escapeAttr(label)} ${escapeAttr(t("stats.sparklineLabel"))}">
+      <svg class="sparkline" viewBox="0 0 ${width} ${height}" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="${escapeAttr(gradientId)}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="currentColor" stop-opacity="0.22"></stop>
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+          </linearGradient>
+        </defs>
+        <path class="sparkline-area" d="${escapeAttr(areaPath(points, height, padding))}" fill="url(#${escapeAttr(gradientId)})"></path>
+        <path class="sparkline-line" d="${escapeAttr(linePath(points))}"></path>
+      </svg>
+    </div>
   `;
 }
 
-function buildDailySeries(rows) {
+function buildDailySeries(rows, startedAt) {
   const byDate = new Map((Array.isArray(rows) ? rows : []).map((row) => [row.date, row.totals ?? {}]));
-  return Array.from({ length: CHART_DAYS }, (_, index) => {
-    const date = isoDateDaysAgo(CHART_DAYS - index - 1);
-    return {
-      date,
-      label: shortDate(date),
-      hasData: byDate.has(date),
-      totals: byDate.get(date) ?? {},
-    };
-  });
+  return chartDates(startedAt).map((date) => ({
+    date,
+    label: shortDate(date),
+    hasData: byDate.has(date),
+    totals: byDate.get(date) ?? {},
+  }));
 }
 
 function seriesValues(dailySeries, eventName) {
@@ -164,12 +165,17 @@ function seriesValues(dailySeries, eventName) {
 function linePoints(values, width, height, padding, max) {
   const usableWidth = width - padding * 2;
   const usableHeight = height - padding * 2;
-  return values.map((value, index) => {
+  const points = values.map((value, index) => {
     if (value === null || value === undefined) return null;
     const x = values.length === 1 ? width / 2 : padding + (usableWidth * index) / (values.length - 1);
     const y = height - padding - (numberValue(value) / max) * usableHeight;
     return [roundPoint(x), roundPoint(y)];
   });
+  if (points.length === 1 && points[0]) {
+    const [, y] = points[0];
+    return [[padding, y], [width - padding, y]];
+  }
+  return points;
 }
 
 function linePath(points) {
@@ -209,13 +215,6 @@ function areaSegmentPath(segment, baseline) {
   return `M ${firstX} ${baseline} ${linePath(segment).replace(/^M /, "L ")} L ${lastX} ${baseline} Z`;
 }
 
-function pointMarkers(points, tone, className = "chart-dot") {
-  const radius = className === "sparkline-dot" ? 3 : 4;
-  return points.filter(Boolean).map(([x, y]) => (
-    `<circle class="${escapeAttr(className)} ${escapeAttr(tone)}" cx="${x}" cy="${y}" r="${radius}"></circle>`
-  )).join("");
-}
-
 function legendItem(tone, label, peak) {
   return `
     <span class="chart-legend-item">
@@ -238,6 +237,39 @@ function isoDateDaysAgo(offset) {
   date.setUTCHours(0, 0, 0, 0);
   date.setUTCDate(date.getUTCDate() - offset);
   return date.toISOString().slice(0, 10);
+}
+
+function chartDates(startedAt) {
+  const today = isoDateDaysAgo(0);
+  const fallbackStart = isoDateDaysAgo(CHART_DAYS - 1);
+  const startedDay = dateKey(startedAt);
+  const start = startedDay ? maxDateKey(startedDay, fallbackStart) : today;
+  return dateRange(start > today ? today : start, today);
+}
+
+function dateRange(start, end) {
+  const dates = [];
+  const current = new Date(`${start}T00:00:00Z`);
+  const last = new Date(`${end}T00:00:00Z`);
+  while (current <= last && dates.length < CHART_DAYS) {
+    dates.push(current.toISOString().slice(0, 10));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  return dates.length ? dates : [end];
+}
+
+function dateKey(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+}
+
+function maxDateKey(left, right) {
+  return left > right ? left : right;
+}
+
+function axisLabels(startDate, endDate) {
+  if (!startDate) return [];
+  return startDate === endDate ? [startDate] : [startDate, endDate];
 }
 
 function shortDate(date) {

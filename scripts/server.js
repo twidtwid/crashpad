@@ -175,6 +175,7 @@ function normalizeStats(value = {}) {
     const count = Number(value.totals?.[eventName] ?? 0);
     stats.totals[eventName] = Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
   }
+  backfillSameDayDailyTotals(stats);
   return stats;
 }
 
@@ -225,6 +226,24 @@ function dailyRows(daily = {}) {
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function dateKey(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+}
+
+function backfillSameDayDailyTotals(stats) {
+  const startedDay = dateKey(stats.startedAt);
+  if (!startedDay || startedDay !== todayKey()) return;
+
+  stats.daily[startedDay] = stats.daily[startedDay] ?? emptyTotals();
+  for (const eventName of STAT_EVENTS) {
+    stats.daily[startedDay][eventName] = Math.max(
+      stats.daily[startedDay][eventName] ?? 0,
+      stats.totals[eventName] ?? 0,
+    );
+  }
 }
 
 function routeStaticPath(pathname) {
