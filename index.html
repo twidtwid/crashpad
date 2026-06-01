@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Local Apple crash report analyzer for .ips and .crash files.">
+  <meta property="og:title" content="Crash Reporter">
+  <meta property="og:description" content="Upload Apple crash reports and inspect a structured diagnostic report.">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Crash Reporter">
+  <meta name="twitter:card" content="summary">
+  <title>Crash Reporter</title>
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="rail" aria-label="Crash report controls">
+      <div class="brand-row">
+        <button class="icon-button" id="focusToggle" type="button" title="Toggle focus mode" aria-label="Toggle focus mode">
+          <span></span><span></span><span></span>
+        </button>
+        <h1>Crash Reporter</h1>
+      </div>
+
+      <section class="rail-section">
+        <h2>Upload .ips / .crash</h2>
+        <label class="drop-zone" id="dropZone">
+          <input id="fileInput" type="file" accept=".ips,.crash,.txt,application/json,text/plain">
+          <strong>Drop file here</strong>
+          <span>or choose a local report</span>
+        </label>
+      </section>
+
+      <section class="rail-section">
+        <h2>Samples</h2>
+        <div class="sample-list" id="sampleList"></div>
+      </section>
+
+      <section class="rail-section">
+        <h2>Filters & Search</h2>
+        <label class="field-label" for="searchInput">Search report</label>
+        <input id="searchInput" class="search" type="search" placeholder="symbol, framework, exception...">
+        <label class="check-row">
+          <input id="systemFramesToggle" type="checkbox" checked>
+          <span>Show system frames</span>
+        </label>
+        <button id="clearFilters" class="secondary-button" type="button">Reset filters</button>
+      </section>
+
+      <section class="rail-section status-section">
+        <h2>Status</h2>
+        <div id="statusBox" class="status-box">Waiting for a crash report.</div>
+      </section>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="kicker">Apple Crash Report Analyzer</p>
+          <h2 id="reportTitle">No report loaded</h2>
+        </div>
+        <div class="actions">
+          <button id="downloadJson" type="button" class="secondary-button" disabled>Export JSON</button>
+          <button id="copySummary" type="button" class="primary-button" disabled>Copy Summary</button>
+        </div>
+      </header>
+
+      <nav class="tabs" aria-label="Report sections">
+        <button class="tab is-active" type="button" data-tab="summary">Summary</button>
+        <button class="tab" type="button" data-tab="threads">Threads</button>
+        <button class="tab" type="button" data-tab="images">Images</button>
+        <button class="tab" type="button" data-tab="raw">Raw JSON</button>
+      </nav>
+
+      <section id="emptyState" class="empty-state">
+        <h2>Upload or select a crash report.</h2>
+        <p>The harness parses Apple IPS JSON reports as documented by Apple: metadata JSON on line one, crash report JSON after it, and <code>bug_type</code> <code>309</code> for crash reports. Legacy text reports are supported on a best-effort basis.</p>
+      </section>
+
+      <section id="errorState" class="error-state" hidden></section>
+      <section id="reportView" class="report-view" hidden></section>
+    </main>
+  </div>
+
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+.DS_Store
+node_modules/
+npm-debug.log*
+
+# Private crash artifacts. Sanitized examples under examples/ are committed.
+*.ips
+*.crash
+!examples/*.ips
+!examples/*.crash
+
+# Generated local analysis output can contain crash-report details.
+reports/
+
+# Agent planning scratch.
+docs/superpowers/

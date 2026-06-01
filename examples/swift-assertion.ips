@@ -1,0 +1,65 @@
+{"bug_type":"309","name":"PosterDemoExtension","bundleID":"com.example.PosterDemoExtension","build_version":"12","platform":6,"incident_id":"DEMO-SWIFT-ASSERTION","timestamp":"2026-05-30 20:50:02.0000 -0700"}
+{
+  "version": 2,
+  "incident": "DEMO-SWIFT-ASSERTION",
+  "procName": "PosterDemoExtension",
+  "pid": 12796,
+  "procPath": "/Applications/PosterDemo.app/Contents/PlugIns/PosterDemoExtension.appex/Contents/MacOS/PosterDemoExtension",
+  "bundleInfo": {
+    "CFBundleIdentifier": "com.example.PosterDemoExtension",
+    "CFBundleShortVersionString": "1.0",
+    "CFBundleVersion": "12"
+  },
+  "modelCode": "Mac14,14",
+  "cpuType": "ARM-64",
+  "osVersion": {
+    "train": "macOS 26.5",
+    "build": "25F71",
+    "releaseType": "User"
+  },
+  "parentProc": "launchd",
+  "parentPid": 1,
+  "captureTime": "2026-05-30 20:50:21.9000 -0700",
+  "procLaunch": "2026-05-30 20:50:02.0000 -0700",
+  "procRole": "Foreground",
+  "exception": {
+    "codes": "0x0000000000000001, 0x0000000100000cc8",
+    "rawCodes": [1, 4294970568],
+    "type": "EXC_BREAKPOINT",
+    "signal": "SIGTRAP"
+  },
+  "termination": {
+    "flags": 0,
+    "code": 5,
+    "namespace": "SIGNAL",
+    "indicator": "Trace/BPT trap: 5",
+    "byProc": "exc handler",
+    "byPid": 12796
+  },
+  "faultingThread": 0,
+  "threads": [
+    {
+      "id": 15935995,
+      "triggered": true,
+      "queue": "com.apple.main-thread",
+      "frames": [
+        { "imageIndex": 0, "imageOffset": 3272, "symbol": "_assertionFailure(_:_:file:line:flags:)", "symbolLocation": 172 },
+        { "imageIndex": 1, "imageOffset": 16384, "symbol": "specialized EnvironmentValues.subscript.getter", "symbolLocation": 88 },
+        { "imageIndex": 1, "imageOffset": 24576, "symbol": "EnvironmentBox.update(property:phase:)", "symbolLocation": 96 },
+        { "imageIndex": 2, "imageOffset": 8192, "symbol": "PosterDemoView.body.getter", "symbolLocation": 52 }
+      ],
+      "threadState": {
+        "flavor": "ARM_THREAD_STATE64",
+        "pc": { "value": 4294970568, "matchesCrashFrame": 1 },
+        "lr": { "value": 4294970440 },
+        "far": { "value": 0 },
+        "esr": { "value": 4060086273, "description": "(Breakpoint) brk 1" }
+      }
+    }
+  ],
+  "usedImages": [
+    { "name": "libswiftCore.dylib", "path": "/usr/lib/swift/libswiftCore.dylib", "base": 4294967296, "size": 5242880, "uuid": "DEMO-SWIFTCORE", "arch": "arm64e" },
+    { "name": "SwiftUICore", "path": "/System/Library/PrivateFrameworks/SwiftUICore.framework/Versions/A/SwiftUICore", "base": 4378853376, "size": 8388608, "uuid": "DEMO-SWIFTUICORE", "arch": "arm64e" },
+    { "name": "PosterDemoExtension", "CFBundleIdentifier": "com.example.PosterDemoExtension", "path": "/Applications/PosterDemo.app/Contents/PlugIns/PosterDemoExtension.appex/Contents/MacOS/PosterDemoExtension", "base": 4496293888, "size": 1048576, "uuid": "DEMO-POSTER", "arch": "arm64" }
+  ]
+}
