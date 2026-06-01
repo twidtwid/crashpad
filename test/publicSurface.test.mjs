@@ -78,6 +78,11 @@ test("stats page exposes public aggregate analytics", async () => {
 
   assert.match(statsHtml, /id="statsGrid"/);
   assert.match(statsHtml, /id="statsCharts"/);
+  assert.match(statsHtml, /class="stats-window-switch"/);
+  assert.match(statsHtml, /data-window="1d"/);
+  assert.match(statsHtml, /data-window="7d"/);
+  assert.match(statsHtml, /data-window="30d"/);
+  assert.match(statsHtml, /data-window="90d"/);
   assert.match(statsHtml, /aria-live="polite"/);
   assert.match(statsHtml, /type="module" src="\/src\/stats.js"/);
   assert.match(statsJs, /fetch\("\/api\/stats"\)/);
@@ -85,10 +90,17 @@ test("stats page exposes public aggregate analytics", async () => {
   assert.match(statsJs, /buildDailySeries/);
   assert.match(statsJs, /stats\?\.startedAt/);
   assert.match(statsJs, /renderDailyChart/);
+  assert.match(statsJs, /selectedWindow/);
+  assert.match(statsJs, /setSelectedWindow/);
+  assert.match(statsJs, /renderNotEnoughHistory/);
+  assert.match(statsJs, /hasTrendData/);
+  assert.match(statsJs, /smoothSegmentPath/);
   assert.match(statsJs, /class="sparkline"/);
   assert.match(statsJs, /class="sparkline-area/);
   assert.match(statsJs, /class="daily-chart"/);
   assert.match(statsJs, /class="daily-chart-card"/);
+  assert.match(statsJs, /class="daily-summary-grid"/);
+  assert.match(statsJs, /class="chart-legend chart-legend--top"/);
   assert.match(statsJs, /role="img"/);
   assert.doesNotMatch(statsJs, /class="bar-chart"|class="bar-row"|class="bar-track"/);
   assert.match(statsJs, /class="stat-card-label"/);

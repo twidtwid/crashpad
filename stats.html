@@ -9,9 +9,19 @@
 </head>
 <body>
   <main class="policy-page stats-page">
-    <p class="kicker" data-i18n="app.name">CrashPad</p>
-    <h1 data-i18n="stats.title">Stats</h1>
-    <p data-i18n="stats.intro">Public aggregate counters for CrashPad usage. These are non-identifiable totals and do not include crash report contents, file names, stack traces, IP addresses, user agents, or identifiers.</p>
+    <header class="stats-header">
+      <div>
+        <p class="kicker" data-i18n="app.name">CrashPad</p>
+        <h1 data-i18n="stats.title">Stats</h1>
+        <p data-i18n="stats.intro">Public aggregate counters for CrashPad usage. These are non-identifiable totals and do not include crash report contents, file names, stack traces, IP addresses, user agents, or identifiers.</p>
+      </div>
+      <div class="stats-window-switch" role="group" aria-label="Stats time window" data-i18n-aria-label="stats.windowLabel">
+        <button class="stats-window-button" type="button" data-window="1d" data-i18n="stats.windows.1d">1d</button>
+        <button class="stats-window-button is-active" type="button" data-window="7d" data-i18n="stats.windows.7d">7d</button>
+        <button class="stats-window-button" type="button" data-window="30d" data-i18n="stats.windows.30d">30d</button>
+        <button class="stats-window-button" type="button" data-window="90d" data-i18n="stats.windows.90d">90d</button>
+      </div>
+    </header>
 
     <div id="statsStatus" class="stats-status" role="status" aria-live="polite" data-i18n="stats.loading">Loading stats...</div>
     <section id="statsGrid" class="stats-grid" aria-live="polite" aria-label="Public aggregate stats" data-i18n-aria-label="stats.gridLabel"></section>

@@ -50,9 +50,8 @@ Upload, unpack, restart, and verify inside the Sprite:
 set -eu
 cd /home/sprite/crashpad
 tar -xzf /tmp/crashpad-sprite.tar.gz
-ps -eo pid=,comm=,args= |
-  awk "\$2 == \"node\" && /scripts\\/server[.]js/ { print \$1 }
-       \$2 == \"npm\" && \$3 == \"start\" { print \$1 }" |
+ps -eo pid=,args= |
+  awk "/[n]ode scripts\\/server[.]js/ || /[n]pm start/ { print \$1 }" |
   xargs -r kill || true
 sleep 1
 HOST=0.0.0.0 PORT=8080 nohup npm start >/tmp/crashpad.log 2>&1 &

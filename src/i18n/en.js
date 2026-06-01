@@ -101,6 +101,7 @@ export const messages = {
     gridLabel: "Public aggregate stats",
     chartTitle: "Charts",
     chartSectionLabel: "Stats charts",
+    windowLabel: "Stats time window",
     lastUpdated: "Last updated {timestamp}",
     notRecorded: "No events recorded yet.",
     successRate: "Analysis Success Rate",
@@ -129,6 +130,12 @@ export const messages = {
       print_opened: "print dialogs",
       analysis_success_rate: "successful / attempted",
     },
+    windows: {
+      "1d": "1d",
+      "7d": "7d",
+      "30d": "30d",
+      "90d": "90d",
+    },
     events: {
       page_view: "Visits",
       report_analyzed: "Crashes Analyzed",
@@ -143,6 +150,8 @@ export const messages = {
       dailyActivity: {
         title: "Daily Activity",
         description: "Real aggregate visits, successful analyses, and parse failures since stats started.",
+        notEnoughHistory: "Trend charts will appear after there are at least two days of stats. Current window starts {date}.",
+        todayLabel: "Current window totals",
         ariaLabel: "Visits, crashes analyzed, and parse failures since stats started",
       },
     },

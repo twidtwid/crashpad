@@ -12,14 +12,28 @@ const EVENT_KEYS = [
   "print_opened",
 ];
 const CHART_DAYS = 7;
+const TREND_MIN_DAYS = 2;
+const DEFAULT_WINDOW = "7d";
+const WINDOWS = new Map([
+  ["1d", 1],
+  ["7d", 7],
+  ["30d", 30],
+  ["90d", 90],
+]);
 
 const els = {
   grid: document.querySelector("#statsGrid"),
   charts: document.querySelector("#statsCharts"),
   status: document.querySelector("#statsStatus"),
+  windowButtons: [...document.querySelectorAll("[data-window]")],
 };
+let currentStats = null;
 
 applyStaticTranslations();
+syncWindowButtons(selectedWindow());
+for (const button of els.windowButtons) {
+  button.addEventListener("click", () => setSelectedWindow(button.dataset.window));
+}
 await trackStatEvent("page_view");
 loadStats();
 
@@ -27,7 +41,8 @@ async function loadStats() {
   try {
     const response = await fetch("/api/stats");
     if (!response.ok) throw new Error(`Stats API returned ${response.status}`);
-    renderStats(await response.json());
+    currentStats = await response.json();
+    renderStats(currentStats);
   } catch {
     els.status.textContent = t("stats.unavailable");
     els.grid.innerHTML = "";
@@ -35,21 +50,23 @@ async function loadStats() {
 }
 
 function renderStats(stats) {
-  const totals = stats?.totals ?? {};
-  const dailySeries = buildDailySeries(stats?.daily ?? [], stats?.startedAt);
+  const windowKey = selectedWindow();
+  const dailySeries = buildDailySeries(stats?.daily ?? [], stats?.startedAt, windowDays(windowKey));
+  const totals = sumTotals(dailySeries);
+  const trendReady = hasTrendData(dailySeries);
   const cards = EVENT_KEYS.map((eventName) => statCard(
     eventName,
     t(`stats.events.${eventName}`),
     formatNumber(totals[eventName]),
     t(`stats.cardSubtitles.${eventName}`),
-    sparkline(eventName, dailySeries, t(`stats.events.${eventName}`)),
+    trendReady ? sparkline(eventName, dailySeries, t(`stats.events.${eventName}`)) : "",
   ));
   cards.push(statCard(
     "analysis_success_rate",
     t("stats.successRate"),
     formatPercent(successRate(totals)),
     t("stats.cardSubtitles.analysis_success_rate"),
-    sparkline("analysis_success_rate", dailySeries, t("stats.successRate")),
+    trendReady ? sparkline("analysis_success_rate", dailySeries, t("stats.successRate")) : "",
   ));
 
   els.grid.innerHTML = cards.join("");
@@ -59,8 +76,55 @@ function renderStats(stats) {
     : t("stats.notRecorded");
 }
 
+function selectedWindow() {
+  const params = new URLSearchParams(window.location.search);
+  const candidate = params.get("window") ?? DEFAULT_WINDOW;
+  return WINDOWS.has(candidate) ? candidate : DEFAULT_WINDOW;
+}
+
+function setSelectedWindow(windowKey) {
+  if (!WINDOWS.has(windowKey)) return;
+  const url = new URL(window.location.href);
+  url.searchParams.set("window", windowKey);
+  window.history.replaceState({}, "", url);
+  syncWindowButtons(windowKey);
+  if (currentStats) renderStats(currentStats);
+}
+
+function syncWindowButtons(windowKey) {
+  for (const button of els.windowButtons) {
+    const isActive = button.dataset.window === windowKey;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  }
+}
+
+function windowDays(windowKey) {
+  return WINDOWS.get(windowKey) ?? WINDOWS.get(DEFAULT_WINDOW);
+}
+
 function renderCharts(dailySeries) {
-  els.charts.innerHTML = renderDailyChart(dailySeries);
+  els.charts.innerHTML = hasTrendData(dailySeries)
+    ? renderDailyChart(dailySeries)
+    : renderNotEnoughHistory(dailySeries);
+}
+
+function renderNotEnoughHistory(dailySeries) {
+  const latest = dailySeries.findLast((row) => row.hasData) ?? dailySeries.at(-1);
+  const latestTotals = latest?.totals ?? {};
+  return `
+    <article class="daily-chart-card daily-chart-card--empty">
+      <div class="stats-chart-head">
+        <h3>${escapeHtml(t("stats.charts.dailyActivity.title"))}</h3>
+        <p>${escapeHtml(t("stats.charts.dailyActivity.notEnoughHistory", { date: latest?.label ?? "" }))}</p>
+      </div>
+      <div class="daily-summary-grid" role="list" aria-label="${escapeAttr(t("stats.charts.dailyActivity.todayLabel"))}">
+        ${summaryMetric("accent", t("stats.events.page_view"), latestTotals.page_view)}
+        ${summaryMetric("success", t("stats.events.report_analyzed"), latestTotals.report_analyzed)}
+        ${summaryMetric("danger", t("stats.events.parse_error"), latestTotals.parse_error)}
+      </div>
+    </article>
+  `;
 }
 
 function renderDailyChart(dailySeries) {
@@ -84,6 +148,11 @@ function renderDailyChart(dailySeries) {
         <h3>${escapeHtml(t("stats.charts.dailyActivity.title"))}</h3>
         <p>${escapeHtml(t("stats.charts.dailyActivity.description"))}</p>
       </div>
+      <div class="chart-legend chart-legend--top">
+        ${legendItem("accent", t("stats.events.page_view"), maxValue(visits))}
+        ${legendItem("success", t("stats.events.report_analyzed"), maxValue(analyzed))}
+        ${legendItem("danger", t("stats.events.parse_error"), maxValue(failures))}
+      </div>
       <svg class="daily-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeAttr(t("stats.charts.dailyActivity.ariaLabel"))}" preserveAspectRatio="none">
         <path class="chart-gridline" d="M ${padding} ${padding} H ${width - padding}"></path>
         <path class="chart-gridline" d="M ${padding} ${height / 2} H ${width - padding}"></path>
@@ -95,11 +164,6 @@ function renderDailyChart(dailySeries) {
       </svg>
       <div class="daily-axis" aria-hidden="true">
         ${axis.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}
-      </div>
-      <div class="chart-legend">
-        ${legendItem("accent", t("stats.events.page_view"), maxValue(visits))}
-        ${legendItem("success", t("stats.events.report_analyzed"), maxValue(analyzed))}
-        ${legendItem("danger", t("stats.events.parse_error"), maxValue(failures))}
       </div>
     </article>
   `;
@@ -125,6 +189,7 @@ function sparkline(eventName, dailySeries, label) {
       return row.hasData && analyzed + failed ? Math.round((analyzed / (analyzed + failed)) * 100) : null;
     })
     : seriesValues(dailySeries, eventName);
+  if (!hasTrendValues(values)) return "";
   const width = 160;
   const height = 48;
   const padding = 4;
@@ -148,14 +213,25 @@ function sparkline(eventName, dailySeries, label) {
   `;
 }
 
-function buildDailySeries(rows, startedAt) {
+function buildDailySeries(rows, startedAt, days) {
   const byDate = new Map((Array.isArray(rows) ? rows : []).map((row) => [row.date, row.totals ?? {}]));
-  return chartDates(startedAt).map((date) => ({
+  return chartDates(startedAt, days).map((date) => ({
     date,
     label: shortDate(date),
     hasData: byDate.has(date),
     totals: byDate.get(date) ?? {},
   }));
+}
+
+function sumTotals(dailySeries) {
+  const totals = Object.fromEntries(EVENT_KEYS.map((eventName) => [eventName, 0]));
+  for (const row of dailySeries) {
+    if (!row.hasData) continue;
+    for (const eventName of EVENT_KEYS) {
+      totals[eventName] += numberValue(row.totals?.[eventName]);
+    }
+  }
+  return totals;
 }
 
 function seriesValues(dailySeries, eventName) {
@@ -165,54 +241,78 @@ function seriesValues(dailySeries, eventName) {
 function linePoints(values, width, height, padding, max) {
   const usableWidth = width - padding * 2;
   const usableHeight = height - padding * 2;
-  const points = values.map((value, index) => {
+  return values.map((value, index) => {
     if (value === null || value === undefined) return null;
     const x = values.length === 1 ? width / 2 : padding + (usableWidth * index) / (values.length - 1);
     const y = height - padding - (numberValue(value) / max) * usableHeight;
     return [roundPoint(x), roundPoint(y)];
   });
-  if (points.length === 1 && points[0]) {
-    const [, y] = points[0];
-    return [[padding, y], [width - padding, y]];
-  }
-  return points;
 }
 
 function linePath(points) {
-  let drawing = false;
-  return points.map((point) => {
-    if (!point) {
-      drawing = false;
-      return "";
-    }
-    const [x, y] = point;
-    const command = drawing ? "L" : "M";
-    drawing = true;
-    return `${command} ${x} ${y}`;
-  }).filter(Boolean).join(" ");
+  return pointSegments(points).map(smoothSegmentPath).filter(Boolean).join(" ");
 }
 
 function areaPath(points, height, padding) {
   const baseline = height - padding;
-  const paths = [];
-  let segment = [];
-  for (const point of points) {
-    if (point) {
-      segment.push(point);
-      continue;
-    }
-    paths.push(areaSegmentPath(segment, baseline));
-    segment = [];
-  }
-  paths.push(areaSegmentPath(segment, baseline));
-  return paths.filter(Boolean).join(" ");
+  return pointSegments(points).map((segment) => areaSegmentPath(segment, baseline)).filter(Boolean).join(" ");
 }
 
 function areaSegmentPath(segment, baseline) {
   if (segment.length < 2) return "";
   const [firstX] = segment[0];
   const [lastX] = segment.at(-1);
-  return `M ${firstX} ${baseline} ${linePath(segment).replace(/^M /, "L ")} L ${lastX} ${baseline} Z`;
+  return `M ${firstX} ${baseline} ${smoothSegmentPath(segment).replace(/^M /, "L ")} L ${lastX} ${baseline} Z`;
+}
+
+function pointSegments(points) {
+  const segments = [];
+  let segment = [];
+  for (const point of points) {
+    if (point) {
+      segment.push(point);
+      continue;
+    }
+    if (segment.length) segments.push(segment);
+    segment = [];
+  }
+  if (segment.length) segments.push(segment);
+  return segments;
+}
+
+function smoothSegmentPath(points) {
+  if (!points.length) return "";
+  if (points.length === 1) return "";
+  if (points.length === 2) return `M ${points[0][0]} ${points[0][1]} L ${points[1][0]} ${points[1][1]}`;
+
+  const xs = points.map(([x]) => x);
+  const ys = points.map(([, y]) => y);
+  const hs = xs.slice(0, -1).map((x, index) => xs[index + 1] - x);
+  const deltas = hs.map((h, index) => h ? (ys[index + 1] - ys[index]) / h : 0);
+  const tangents = Array(points.length).fill(0);
+  tangents[0] = deltas[0];
+  tangents[tangents.length - 1] = deltas.at(-1);
+  for (let index = 1; index < points.length - 1; index += 1) {
+    if (deltas[index - 1] * deltas[index] <= 0) {
+      tangents[index] = 0;
+    } else {
+      const w1 = 2 * hs[index] + hs[index - 1];
+      const w2 = hs[index] + 2 * hs[index - 1];
+      const denominator = (w1 / deltas[index - 1]) + (w2 / deltas[index]);
+      tangents[index] = denominator ? (w1 + w2) / denominator : 0;
+    }
+  }
+
+  const commands = [`M ${xs[0]} ${ys[0]}`];
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const h = hs[index];
+    const c1x = roundPoint(xs[index] + h / 3);
+    const c1y = roundPoint(ys[index] + (tangents[index] * h) / 3);
+    const c2x = roundPoint(xs[index + 1] - h / 3);
+    const c2y = roundPoint(ys[index + 1] - (tangents[index + 1] * h) / 3);
+    commands.push(`C ${c1x} ${c1y} ${c2x} ${c2y} ${xs[index + 1]} ${ys[index + 1]}`);
+  }
+  return commands.join(" ");
 }
 
 function legendItem(tone, label, peak) {
@@ -222,6 +322,15 @@ function legendItem(tone, label, peak) {
       ${escapeHtml(label)}
       <span class="chart-legend-value">${escapeHtml(t("stats.peak", { value: formatNumber(peak) }))}</span>
     </span>
+  `;
+}
+
+function summaryMetric(tone, label, value) {
+  return `
+    <div class="daily-summary-metric ${escapeAttr(tone)}" role="listitem">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(formatNumber(value))}</strong>
+    </div>
   `;
 }
 
@@ -239,19 +348,19 @@ function isoDateDaysAgo(offset) {
   return date.toISOString().slice(0, 10);
 }
 
-function chartDates(startedAt) {
+function chartDates(startedAt, days) {
   const today = isoDateDaysAgo(0);
-  const fallbackStart = isoDateDaysAgo(CHART_DAYS - 1);
+  const fallbackStart = isoDateDaysAgo(Math.max(1, days) - 1);
   const startedDay = dateKey(startedAt);
   const start = startedDay ? maxDateKey(startedDay, fallbackStart) : today;
-  return dateRange(start > today ? today : start, today);
+  return dateRange(start > today ? today : start, today, days);
 }
 
-function dateRange(start, end) {
+function dateRange(start, end, limit = CHART_DAYS) {
   const dates = [];
   const current = new Date(`${start}T00:00:00Z`);
   const last = new Date(`${end}T00:00:00Z`);
-  while (current <= last && dates.length < CHART_DAYS) {
+  while (current <= last && dates.length < limit) {
     dates.push(current.toISOString().slice(0, 10));
     current.setUTCDate(current.getUTCDate() + 1);
   }
@@ -283,11 +392,21 @@ function roundPoint(value) {
 }
 
 function maxSeriesValue(...series) {
-  return Math.max(1, ...series.flat().filter((value) => value !== null && value !== undefined).map(numberValue));
+  const max = Math.max(1, ...series.flat().filter((value) => value !== null && value !== undefined).map(numberValue));
+  return roundPoint(max * 1.1);
 }
 
 function maxValue(values) {
   return Math.max(0, ...values.filter((value) => value !== null && value !== undefined).map(numberValue));
+}
+
+function hasTrendData(dailySeries) {
+  return dailySeries.filter((row) => row.hasData).length >= TREND_MIN_DAYS;
+}
+
+function hasTrendValues(values) {
+  const present = values.filter((value) => value !== null && value !== undefined);
+  return present.length >= TREND_MIN_DAYS && present.some((value) => numberValue(value) > 0);
 }
 
 function successRate(totals) {
