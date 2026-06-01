@@ -15,7 +15,7 @@ test("page exposes privacy policy, stats, repository link, and clear-report cont
 
   assert.match(html, /href="\/privacy"/);
   assert.match(html, /href="\/stats"/);
-  assert.match(html, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
+  assert.match(html, /href="https:\/\/github\.com\/twidtwid\/crashpad"/);
   assert.match(html, /id="clearReport"/);
 });
 
@@ -34,7 +34,7 @@ test("privacy copy distinguishes local file input from server upload routes and 
   assert.match(`${privacy}\n${messages}`, /non-identifiable aggregate stats/);
   assert.match(`${privacy}\n${messages}`, /does not store IP addresses, user agents, file names, report contents, stack traces, or identifiers/);
   assert.match(privacy, /data-i18n-html="privacy\.localRunHtml"/);
-  assert.match(privacy, /href="https:\/\/github\.com\/twidtwid\/crashreporter"[^>]*target="_blank"/);
+  assert.match(privacy, /href="https:\/\/github\.com\/twidtwid\/crashpad"[^>]*target="_blank"/);
   assert.match(messages, /run this completely locally/);
   assert.match(stats, /data-i18n="stats.title"/);
   assert.match(readme, /they are not network uploads/);
@@ -62,11 +62,11 @@ test("project links stay in the sidebar instead of the report action bar", async
 
   assert.match(projectLinks, /href="\/privacy"/);
   assert.match(projectLinks, /href="\/stats"/);
-  assert.match(projectLinks, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
+  assert.match(projectLinks, /href="https:\/\/github\.com\/twidtwid\/crashpad"/);
   assert.match(projectLinks, /class="external-link"[^>]*target="_blank"/);
   assert.doesNotMatch(actionBar, /href="\/privacy"/);
   assert.doesNotMatch(actionBar, /href="\/stats"/);
-  assert.doesNotMatch(actionBar, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
+  assert.doesNotMatch(actionBar, /href="https:\/\/github\.com\/twidtwid\/crashpad"/);
 });
 
 test("stats page exposes public aggregate analytics", async () => {

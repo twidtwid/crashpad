@@ -1,5 +1,5 @@
 {
-  "name": "crashreporter",
+  "name": "crashpad",
   "version": "0.1.0",
   "description": "A local Apple crash report parser and root-cause analysis harness.",
   "private": true,
@@ -7,7 +7,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/twidtwid/crashreporter.git"
+    "url": "https://github.com/twidtwid/crashpad.git"
   },
   "engines": {
     "node": ">=20"

@@ -77,7 +77,7 @@ export const messages = {
     title: "Privacy Policy",
     pageTitle: "Privacy Policy - CrashPad",
     intro: "CrashPad is designed to analyze Apple crash reports in your browser. Reports you choose or drop are read locally in the current tab, not posted to this server, and are not stored by the application.",
-    localRunHtml: "Check out the <a class=\"external-link\" href=\"https://github.com/twidtwid/crashreporter\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub project</a> if you would like to run this completely locally.",
+    localRunHtml: "Check out the <a class=\"external-link\" href=\"https://github.com/twidtwid/crashpad\" target=\"_blank\" rel=\"noopener noreferrer\">GitHub project</a> if you would like to run this completely locally.",
     processingTitle: "What The App Processes",
     processingBody: "When you choose or drop a crash report, the file is read by browser JavaScript in the current tab so the report can be parsed and rendered. The file picker and drop target are local browser inputs, not a network upload. The app keeps the parsed report in page memory only.",
     storageTitle: "What The Server Stores",
