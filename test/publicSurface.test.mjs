@@ -18,6 +18,21 @@ test("page exposes privacy policy, repository link, and clear-report control", a
   assert.match(html, /id="clearReport"/);
 });
 
+test("privacy copy distinguishes local file input from server upload routes", async () => {
+  const [index, privacy, messages, readme] = await Promise.all([
+    readProjectFile("index.html"),
+    readProjectFile("privacy.html"),
+    readProjectFile("src/i18n/en.js"),
+    readProjectFile("README.md"),
+  ]);
+
+  assert.match(index, />Open \.ips \/ \.crash</);
+  assert.match(privacy, /local browser inputs, not a network upload/);
+  assert.match(messages, /has no route that receives crash report files/);
+  assert.match(readme, /they are not network uploads/);
+  assert.doesNotMatch(`${privacy}\n${messages}\n${readme}`, /upload endpoint|uploaded reports|upload control/i);
+});
+
 test("uses CrashPad as the product name", async () => {
   const [index, privacy, messages, readme] = await Promise.all([
     readProjectFile("index.html"),
@@ -62,7 +77,7 @@ test("exposes a printable report surface and print action", async () => {
   assert.match(messages, /printReport: "Print Report"/);
 });
 
-test("browser app does not use persistent storage APIs for uploaded reports", async () => {
+test("browser app does not use persistent storage APIs for chosen reports", async () => {
   const app = await readProjectFile("src/app.js");
 
   assert.doesNotMatch(app, /localStorage|sessionStorage|indexedDB|caches\.open/);
@@ -71,7 +86,7 @@ test("browser app does not use persistent storage APIs for uploaded reports", as
   assert.match(app, /analysis = null/);
 });
 
-test("server has no upload endpoint and restricts samples to examples", async () => {
+test("server rejects write methods and restricts samples to examples", async () => {
   const server = await readProjectFile("scripts/server.js");
 
   assert.doesNotMatch(server, /multipart|formData|createWriteStream|appendFile|writeFile/);

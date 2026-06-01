@@ -12,8 +12,8 @@ The analyzer is based on Apple's crash report documentation:
 
 ## Features
 
-- Upload or drag in `.ips` and `.crash` reports.
-- Keep uploaded reports ephemeral: parsing happens in the browser tab, the server has no upload endpoint, and Forget Report clears in-memory report data.
+- Open or drag in `.ips` and `.crash` reports.
+- Keep chosen reports ephemeral: parsing happens in the browser tab, no report file is posted to the server, and Forget Report clears in-memory report data.
 - Parse Apple's two-object IPS JSON format and reject non-crash IPS logs.
 - Render summary, environment, exception and termination fields, diagnostics, crashed thread frames, binary images, and raw JSON.
 - Explain likely root cause using documented clues such as Last Exception Backtrace, VM Region Info, exception notes, triggered thread, and thread-state registers.
@@ -46,7 +46,7 @@ Generated analysis files are written to `reports/`.
 
 Crash reports can contain device models, OS builds, process paths, bundle identifiers, incident identifiers, stack traces, and diagnostic messages. This repo intentionally ignores real `.ips` and `.crash` files, plus generated `reports/` output. Only the sanitized QLThumbnail demo under `examples/` is committed.
 
-The browser upload flow does not transmit report file contents to the server. The report is parsed in the current tab and retained in page memory until the user clicks Forget Report, reloads the page, or closes the tab. Export JSON and Copy Summary are local browser actions initiated by the user.
+The browser file-open flow does not transmit report file contents to the server. The file picker and drop target read the report with browser JavaScript in the current tab; they are not network uploads. The report is retained in page memory until the user clicks Forget Report, reloads the page, or closes the tab. Export JSON and Copy Summary are local browser actions initiated by the user.
 
 The hosted page includes `/privacy`, which states the same policy in user-facing language. Before making a fork or deployment public, review any added fixtures and generated artifacts for private paths, identifiers, proprietary symbols, or user data.
 

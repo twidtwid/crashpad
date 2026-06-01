@@ -11,16 +11,16 @@
   <main class="policy-page">
     <p class="kicker" data-i18n="app.name">CrashPad</p>
     <h1 data-i18n="privacy.title">Privacy Policy</h1>
-    <p data-i18n="privacy.intro">CrashPad is designed to analyze Apple crash reports in your browser. Uploaded crash reports are not sent to this server and are not stored by the application.</p>
+    <p data-i18n="privacy.intro">CrashPad is designed to analyze Apple crash reports in your browser. Reports you choose or drop are read locally in the current tab, not posted to this server, and are not stored by the application.</p>
 
     <section>
       <h2 data-i18n="privacy.processingTitle">What The App Processes</h2>
-      <p data-i18n="privacy.processingBody">When you choose or drop a crash report, the file is read by browser JavaScript in the current tab so the report can be parsed and rendered. The app keeps the parsed report in page memory only.</p>
+      <p data-i18n="privacy.processingBody">When you choose or drop a crash report, the file is read by browser JavaScript in the current tab so the report can be parsed and rendered. The file picker and drop target are local browser inputs, not a network upload. The app keeps the parsed report in page memory only.</p>
     </section>
 
     <section>
       <h2 data-i18n="privacy.storageTitle">What The Server Stores</h2>
-      <p data-i18n="privacy.storageBody">The server hosts the static app and one public QLThumbnail example report. It does not provide an upload endpoint, write uploaded reports to disk, or persist uploaded report contents.</p>
+      <p data-i18n="privacy.storageBody">The server hosts the static app and read-only sample routes for the public QLThumbnail example report. It rejects POST and PUT requests, has no route that receives crash report files, and never writes chosen reports to disk.</p>
     </section>
 
     <section>
@@ -30,7 +30,7 @@
 
     <section>
       <h2 data-i18n="privacy.logsTitle">Operational Logs</h2>
-      <p data-i18n="privacy.logsBody">Hosting infrastructure may record ordinary request metadata such as IP address, URL path, user agent, and timestamps. Do not put sensitive crash data in URLs. Crash report file contents are not transmitted by the upload control.</p>
+      <p data-i18n="privacy.logsBody">Hosting infrastructure may record ordinary request metadata such as IP address, URL path, user agent, and timestamps. Do not put sensitive crash data in URLs. Crash report file contents are not transmitted by the file picker or drop target.</p>
     </section>
 
     <section>
