@@ -50,9 +50,10 @@ Upload, unpack, restart, and verify inside the Sprite:
 set -eu
 cd /home/sprite/crashpad
 tar -xzf /tmp/crashpad-sprite.tar.gz
-pgrep -f "[n]ode .*scripts/server[.]js" | xargs -r kill || true
+server=scripts/server.js
+pgrep -f "[n]ode scripts/server[.]js|[n]pm start" | xargs -r kill || true
 sleep 1
-HOST=0.0.0.0 PORT=8080 nohup node /home/sprite/crashpad/scripts/server.js >/tmp/crashpad.log 2>&1 &
+HOST=0.0.0.0 PORT=8080 nohup node "$server" >/tmp/crashpad.log 2>&1 &
 for attempt in 1 2 3 4 5; do
   curl -fsS http://127.0.0.1:8080/ >/dev/null && exit 0
   sleep 1
