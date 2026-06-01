@@ -10,3 +10,4 @@ All notable changes to this project will be documented in this file.
 - Added a sanitized QLThumbnail example for public-safe testing and demos.
 - Added privacy policy page, repository links, and an explicit Forget Report control for ephemeral browser-local file imports.
 - Added container deployment defaults for hosted environments.
+- Added a Sprite deployment runbook for the public CrashPad instance.

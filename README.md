@@ -17,6 +17,7 @@ The analyzer is based on Apple's crash report documentation:
 - Parse Apple's two-object IPS JSON format and reject non-crash IPS logs.
 - Render summary, environment, exception and termination fields, diagnostics, crashed thread frames, binary images, and raw JSON.
 - Explain likely root cause using documented clues such as Last Exception Backtrace, VM Region Info, exception notes, triggered thread, and thread-state registers.
+- Surface Crash Story, Symbolication Readiness, and Collection Context sections for dSYM gaps, OS terminations, and related Apple data sources such as Xcode Organizer, device logs, and MetricKit.
 - Analyze all local reports from the command line and write Markdown/JSON output.
 - Run without runtime dependencies; the app uses browser ES modules and Node.js built-ins.
 
@@ -58,7 +59,7 @@ The server reads `PORT` and `HOST` from the environment. For local development i
 HOST=0.0.0.0 PORT=8080 npm start
 ```
 
-A minimal `Dockerfile` is included for Fly.io-style container deployment.
+A minimal `Dockerfile` is included for Fly.io-style container deployment. The current public Sprite deployment is documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Report Interpretation
 
