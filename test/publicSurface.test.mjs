@@ -18,6 +18,17 @@ test("page exposes privacy policy, repository link, and clear-report control", a
   assert.match(html, /id="clearReport"/);
 });
 
+test("project links stay in the sidebar instead of the report action bar", async () => {
+  const html = await readProjectFile("index.html");
+  const projectLinks = html.match(/<section class="rail-section project-links">[\s\S]*?<\/section>/)?.[0] ?? "";
+  const actionBar = html.match(/<div class="actions">[\s\S]*?<\/div>/)?.[0] ?? "";
+
+  assert.match(projectLinks, /href="\/privacy"/);
+  assert.match(projectLinks, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
+  assert.doesNotMatch(actionBar, /href="\/privacy"/);
+  assert.doesNotMatch(actionBar, /href="https:\/\/github\.com\/twidtwid\/crashreporter"/);
+});
+
 test("browser app does not use persistent storage APIs for uploaded reports", async () => {
   const app = await readProjectFile("src/app.js");
 
