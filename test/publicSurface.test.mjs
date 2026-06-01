@@ -104,6 +104,14 @@ test("topbar action buttons use a compact density", async () => {
   assert.match(css, /font-size:\s*0\.8rem/);
 });
 
+test("copy summary action is neutral until the user acts on it", async () => {
+  const html = await readProjectFile("index.html");
+  const copySummaryButton = html.match(/<button id="copySummary"[\s\S]*?<\/button>/)?.[0] ?? "";
+
+  assert.match(copySummaryButton, /class="secondary-button"/);
+  assert.doesNotMatch(copySummaryButton, /class="primary-button"/);
+});
+
 test("summary exposes crash story, collection context, and symbolication readiness", async () => {
   const [app, messages] = await Promise.all([
     readProjectFile("src/app.js"),
