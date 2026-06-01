@@ -18,6 +18,20 @@ test("page exposes privacy policy, repository link, and clear-report control", a
   assert.match(html, /id="clearReport"/);
 });
 
+test("uses CrashPad as the product name", async () => {
+  const [index, privacy, messages, readme] = await Promise.all([
+    readProjectFile("index.html"),
+    readProjectFile("privacy.html"),
+    readProjectFile("src/i18n/en.js"),
+    readProjectFile("README.md"),
+  ]);
+
+  assert.match(index, />CrashPad</);
+  assert.match(privacy, /Privacy Policy - CrashPad/);
+  assert.match(messages, /name: "CrashPad"/);
+  assert.match(readme, /^# CrashPad/m);
+});
+
 test("project links stay in the sidebar instead of the report action bar", async () => {
   const html = await readProjectFile("index.html");
   const projectLinks = html.match(/<section class="rail-section project-links">[\s\S]*?<\/section>/)?.[0] ?? "";

@@ -1,6 +1,6 @@
 export const messages = {
   app: {
-    name: "Crash Reporter",
+    name: "CrashPad",
     description: "Ephemeral Apple crash report analyzer for .ips and .crash files.",
     ogDescription: "Upload Apple crash reports and inspect a structured diagnostic report.",
     kicker: "Apple Crash Report Analyzer",
@@ -64,10 +64,10 @@ export const messages = {
     parseTitle: "Could not parse report",
   },
   privacy: {
-    metaDescription: "Privacy policy for Crash Reporter.",
+    metaDescription: "Privacy policy for CrashPad.",
     title: "Privacy Policy",
-    pageTitle: "Privacy Policy - Crash Reporter",
-    intro: "Crash Reporter is designed to analyze Apple crash reports in your browser. Uploaded crash reports are not sent to this server and are not stored by the application.",
+    pageTitle: "Privacy Policy - CrashPad",
+    intro: "CrashPad is designed to analyze Apple crash reports in your browser. Uploaded crash reports are not sent to this server and are not stored by the application.",
     processingTitle: "What The App Processes",
     processingBody: "When you choose or drop a crash report, the file is read by browser JavaScript in the current tab so the report can be parsed and rendered. The app keeps the parsed report in page memory only.",
     storageTitle: "What The Server Stores",

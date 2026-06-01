@@ -1,4 +1,4 @@
-# Crash Reporter
+# CrashPad
 
 A small web app for analyzing Apple crash reports. It accepts `.ips` JSON crash reports from iOS, macOS, Catalyst, and simulator targets, plus legacy text `.crash` reports, and produces a structured report that explains the likely root-cause path in plain language.
 

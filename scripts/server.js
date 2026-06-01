@@ -39,7 +39,7 @@ createServer(async (request, response) => {
     response.end(status === 404 ? "Not found" : error.stack);
   }
 }).listen(port, host, () => {
-  console.log(`Crash Reporter running at http://${host}:${port}`);
+  console.log(`CrashPad running at http://${host}:${port}`);
 });
 
 async function listSamples() {
