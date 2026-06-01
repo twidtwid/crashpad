@@ -502,7 +502,7 @@ function renderCrashStory(crashStory) {
       <ul class="diagnostic-list">
         ${crashStory.checks.map((check) => `
           <li>
-            <strong>${highlight(check.label)}${check.status ? ` · ${highlight(check.status)}` : ""}</strong>
+            <strong>${renderReferenceLink(check.label, check.referenceUrl)}${check.status ? ` · ${highlight(check.status)}` : ""}</strong>
             ${highlight(check.detail)}
           </li>
         `).join("")}
@@ -525,7 +525,7 @@ function renderRootCauseGuide(rootCause) {
       <div class="clue-grid">
         ${(rootCause.signals ?? []).map((signal) => `
           <article class="clue-card">
-            <strong>${highlight(signal.label)}</strong>
+            <strong>${renderReferenceLink(signal.label, signal.referenceUrl)}</strong>
             <code>${highlight(signal.value || "Not present")}</code>
             <span>${highlight(signal.meaning)}</span>
           </article>
@@ -543,10 +543,10 @@ function renderSymbolicationReadiness(symbolication) {
     <section class="panel">
       <h3 class="section-title">${escapeHtml(t("report.summary.symbolicationReadiness"))}</h3>
       ${definitionList([
-        [t("report.fields.symbolicationStatus"), symbolication.fullySymbolicated ? t("report.fields.ready") : t("report.fields.needsDsym")],
+        [t("report.fields.symbolicationStatus"), symbolication.fullySymbolicated ? t("report.fields.ready") : t("report.fields.needsDsym"), symbolication.referenceUrl],
         [t("report.fields.checkedFrames"), String(symbolication.totalFramesChecked ?? 0)],
         [t("report.fields.unsymbolicatedFrames"), String(symbolication.unsymbolicatedFrames ?? 0)],
-        [t("report.fields.symbolicationAdvice"), symbolication.advice],
+        [t("report.fields.symbolicationAdvice"), symbolication.advice, symbolication.referenceUrl],
       ])}
       ${missingImages.length ? `
         <ul class="diagnostic-list compact-list">
@@ -570,15 +570,15 @@ function renderCollectionContext(context) {
       <h3 class="section-title">${escapeHtml(t("report.summary.collectionContext"))}</h3>
       <p class="panel-intro">${highlight(context.summary || "")}</p>
       ${definitionList([
-        [t("report.fields.primarySource"), context.primarySource],
-        [t("report.fields.bugType"), context.bugType],
+        [t("report.fields.primarySource"), context.primarySource, context.relatedSources?.[0]?.url],
+        [t("report.fields.bugType"), context.bugType, "https://developer.apple.com/documentation/xcode/interpreting-the-json-format-of-a-crash-report"],
         [t("report.fields.incident"), context.incident],
       ])}
       <h4 class="subsection-title">${escapeHtml(t("report.summary.relatedSources"))}</h4>
       <ul class="diagnostic-list compact-list">
         ${(context.relatedSources ?? []).map((source) => `
           <li>
-            <strong>${highlight(source.label)}</strong>
+            <strong>${renderReferenceLink(source.label, source.url)}</strong>
             ${highlight(source.detail)}
           </li>
         `).join("")}
@@ -686,8 +686,8 @@ function diagnosticsList(diagnostics) {
 function definitionList(items) {
   return `
     <dl class="definition-list">
-      ${items.map(([key, value]) => `
-        <dt>${escapeHtml(key)}</dt>
+      ${items.map(([key, value, referenceUrl]) => `
+        <dt>${renderReferenceLink(key, referenceUrl)}</dt>
         <dd>${value ? highlight(String(value)) : `<span class="muted">${escapeHtml(t("report.fields.notPresent"))}</span>`}</dd>
       `).join("")}
     </dl>
@@ -813,6 +813,17 @@ function highlight(value) {
   if (!state.query) return escaped;
   const needle = escapeRegExp(state.query);
   return escaped.replace(new RegExp(`(${needle})`, "gi"), "<mark>$1</mark>");
+}
+
+function renderReferenceLink(label, url) {
+  const safeUrl = safeReferenceUrl(url);
+  if (!safeUrl) return highlight(label);
+  return `<a class="reference-link" href="${escapeAttr(safeUrl)}" target="_blank" rel="noopener noreferrer">${highlight(label)}</a>`;
+}
+
+function safeReferenceUrl(url) {
+  const value = String(url ?? "");
+  return value.startsWith("https://developer.apple.com/") ? value : "";
 }
 
 function escapeHtml(value) {

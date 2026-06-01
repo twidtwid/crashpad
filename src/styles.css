@@ -826,6 +826,16 @@ tr:last-child td {
   color: var(--muted);
 }
 
+.reference-link {
+  color: var(--accent);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 2px;
+}
+
+.reference-link:hover {
+  color: var(--accent-strong);
+}
+
 .diagnostic-list,
 .recommendations {
   display: grid;

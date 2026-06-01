@@ -24,6 +24,19 @@ const PLATFORM_NAMES = new Map([
 ]);
 
 const SYSTEM_PATH_PREFIXES = ["/System/", "/usr/lib/"];
+const REFERENCE_URLS = {
+  acquiringLogs: "https://developer.apple.com/documentation/xcode/acquiring-crash-reports-and-diagnostic-logs",
+  fields: "https://developer.apple.com/documentation/xcode/examining-the-fields-in-a-crash-report",
+  exceptionTypes: "https://developer.apple.com/documentation/xcode/understanding-the-exception-types-in-a-crash-report",
+  jsonFormat: "https://developer.apple.com/documentation/xcode/interpreting-the-json-format-of-a-crash-report",
+  symbolication: "https://developer.apple.com/documentation/xcode/adding-identifiable-symbol-names-to-a-crash-report",
+  commonCrashes: "https://developer.apple.com/documentation/xcode/identifying-the-cause-of-common-crashes",
+  languageException: "https://developer.apple.com/documentation/xcode/addressing-language-exception-crashes",
+  memoryAccess: "https://developer.apple.com/documentation/xcode/investigating-memory-access-crashes",
+  breakpointTrap: "https://developer.apple.com/documentation/xcode/sigtrap_sigill",
+  watchdog: "https://developer.apple.com/documentation/xcode/addressing-watchdog-terminations",
+  metricKit: "https://developer.apple.com/documentation/metrickit",
+};
 
 export function platformName(value) {
   const numeric = Number(value);
@@ -434,6 +447,7 @@ function classifyOsTermination(report = {}) {
       label: "Watchdog termination",
       summary: watchdogSummary(namespace, indicator),
       advice: "Use lifecycle timing rather than only frame 0: look at launch/resume/scene/background work, especially synchronous main-thread I/O and waits.",
+      referenceUrl: REFERENCE_URLS.watchdog,
     };
   }
 
@@ -443,6 +457,7 @@ function classifyOsTermination(report = {}) {
       label: "Memory pressure termination",
       summary: "The OS appears to have killed the process under memory pressure rather than because one thread threw a language or CPU exception.",
       advice: "Correlate with memory footprint, MetricKit memory diagnostics, and nearby jetsam logs before treating the crashed thread as the sole cause.",
+      referenceUrl: REFERENCE_URLS.acquiringLogs,
     };
   }
 
@@ -452,6 +467,7 @@ function classifyOsTermination(report = {}) {
       label: "Thermal termination",
       summary: "The OS appears to have ended the process because the device was under thermal pressure.",
       advice: "Correlate with device conditions, CPU/GPU activity, and MetricKit diagnostics.",
+      referenceUrl: REFERENCE_URLS.acquiringLogs,
     };
   }
 
@@ -461,6 +477,7 @@ function classifyOsTermination(report = {}) {
       label: "Code signature termination",
       summary: "The OS appears to have ended the process because code signing or executable validation failed.",
       advice: "Check the app bundle, embedded frameworks, entitlements, provisioning, and distribution channel before debugging app logic.",
+      referenceUrl: REFERENCE_URLS.acquiringLogs,
     };
   }
 
@@ -470,6 +487,7 @@ function classifyOsTermination(report = {}) {
       label: "Dynamic linker termination",
       summary: "The dynamic linker ended the process while loading code or resolving a dependency.",
       advice: "Inspect missing libraries, incompatible symbols, install names, and deployment-target mismatches.",
+      referenceUrl: REFERENCE_URLS.exceptionTypes,
     };
   }
 
@@ -479,6 +497,7 @@ function classifyOsTermination(report = {}) {
       label: `${namespace} termination`,
       summary: `The ${namespace} subsystem recorded the process exit reason.`,
       advice: "Use the termination namespace and message to scope the OS subsystem before changing app code.",
+      referenceUrl: REFERENCE_URLS.fields,
     };
   }
 
@@ -508,16 +527,19 @@ function buildCollectionContext(parsed, report, metadata, osTermination) {
     {
       label: "Xcode Devices and Simulators",
       detail: "Use local device logs and direct symbolication when reproducing or when a user provides raw diagnostics from a device.",
+      url: REFERENCE_URLS.acquiringLogs,
     },
     {
       label: "Xcode Crashes Organizer",
       detail: osTermination.kind
         ? "Organizer is useful for App Store and TestFlight crash aggregation, but watchdog, jetsam, thermal, invalid code signature, and other OS termination reports may not always appear in Xcode Organizer."
         : "Organizer is useful for App Store and TestFlight crash aggregation when users share diagnostics and matching symbols are available.",
+      url: REFERENCE_URLS.acquiringLogs,
     },
     {
       label: "MetricKit",
       detail: "MetricKit payloads can corroborate crashes with hang, launch, CPU exception, disk write, memory, and signpost diagnostics collected by the app.",
+      url: REFERENCE_URLS.metricKit,
     },
   ];
 
@@ -539,6 +561,7 @@ function buildCrashStory(report, exception, crashedThread, crashedFrames, lastEx
     label: "Crash mechanism",
     status: "mechanism",
     detail: `${mechanism} explains how the process stopped. Treat it as the mechanism first, then use termination, diagnostics, and frames to infer cause.`,
+    referenceUrl: REFERENCE_URLS.exceptionTypes,
   });
 
   if (osTermination.kind) {
@@ -546,12 +569,14 @@ function buildCrashStory(report, exception, crashedThread, crashedFrames, lastEx
       label: "Termination reason",
       status: "important",
       detail: `${osTermination.label}: ${osTermination.summary}`,
+      referenceUrl: osTermination.referenceUrl || REFERENCE_URLS.fields,
     });
   } else if (exception.terminationNamespace) {
     checks.push({
       label: "Termination reason",
       status: "present",
       detail: `${exception.terminationNamespace} ${exception.terminationCodeHex || exception.terminationCode || ""} ${exception.terminationIndicator || ""}`.trim(),
+      referenceUrl: REFERENCE_URLS.fields,
     });
   }
 
@@ -561,12 +586,14 @@ function buildCrashStory(report, exception, crashedThread, crashedFrames, lastEx
       label: "Primary stack",
       status: "strong",
       detail: `Last Exception Backtrace is present; use ${frameSummary(throwFrame)} before focusing on abort or pthread frames.`,
+      referenceUrl: REFERENCE_URLS.languageException,
     });
   } else {
     checks.push({
       label: "Primary stack",
       status: topFrame ? "present" : "missing",
       detail: topFrame ? `Triggered thread ${threadLabel(crashedThread, report.faultingThread) || "0"} starts at ${frameSummary(topFrame)}.` : "No crashed-thread frames were present.",
+      referenceUrl: REFERENCE_URLS.fields,
     });
   }
 
@@ -577,6 +604,7 @@ function buildCrashStory(report, exception, crashedThread, crashedFrames, lastEx
         label: "Faulting address",
         status: isVeryLowAddress(address) ? "important" : "present",
         detail: `${address}${isVeryLowAddress(address) ? " is a low address, which often indicates a nil or near-nil dereference." : " is the address reported by the exception subtype or raw exception codes."}`,
+        referenceUrl: REFERENCE_URLS.memoryAccess,
       });
     }
   }
@@ -587,6 +615,7 @@ function buildCrashStory(report, exception, crashedThread, crashedFrames, lastEx
       label: diagnostic.source,
       status: "context",
       detail: truncateMiddle(diagnostic.message, 220),
+      referenceUrl: diagnosticReferenceUrl(diagnostic.source, exception.category),
     });
   }
 
@@ -594,6 +623,7 @@ function buildCrashStory(report, exception, crashedThread, crashedFrames, lastEx
     label: "Symbolication",
     status: symbolication.fullySymbolicated ? "ready" : "needs dSYM",
     detail: symbolication.advice,
+    referenceUrl: REFERENCE_URLS.symbolication,
   });
 
   return {
@@ -615,6 +645,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
     label: "Crash mechanism",
     value: mechanism,
     meaning: "This field explains how the process quit. Apple notes that exception information is the mechanism, not always the root cause.",
+    referenceUrl: REFERENCE_URLS.exceptionTypes,
   });
 
   if (termination) {
@@ -622,6 +653,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       label: "Termination Reason",
       value: termination,
       meaning: terminationMeaning(exception.terminationNamespace),
+      referenceUrl: osTermination.referenceUrl || REFERENCE_URLS.fields,
     });
   }
 
@@ -630,6 +662,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       label: "Triggered Thread",
       value: triggeredThread,
       meaning: "This is the thread on which the exception originated; frame 0 is the code executing when that thread stopped.",
+      referenceUrl: REFERENCE_URLS.fields,
     });
   }
 
@@ -638,6 +671,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       label: "Exception Note",
       value: "SIMULATED",
       meaning: "Apple documents SIMULATED as not being a normal crash; the process may have been asked to quit after a generated fault report.",
+      referenceUrl: REFERENCE_URLS.jsonFormat,
     });
   }
 
@@ -647,6 +681,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       label: diagnostic.source,
       value: truncateMiddle(diagnostic.message, 260),
       meaning: diagnosticMeaning(diagnostic.source, exception.category),
+      referenceUrl: diagnosticReferenceUrl(diagnostic.source, exception.category),
     });
   }
 
@@ -665,12 +700,14 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       label: "OS termination",
       value: osTermination.label,
       meaning: osTermination.summary,
+      referenceUrl: osTermination.referenceUrl || REFERENCE_URLS.fields,
     });
     if (osTermination.advice) {
       signals.push({
         label: "Collection clue",
         value: osTermination.advice,
         meaning: "OS-enforced exits often need lifecycle timing, device logs, and MetricKit context in addition to the crashed-thread stack.",
+        referenceUrl: osTermination.kind === "watchdog" ? REFERENCE_URLS.watchdog : REFERENCE_URLS.acquiringLogs,
       });
     }
 
@@ -689,6 +726,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       label: "Last Exception Backtrace",
       value: frameSummary(throwFrame),
       meaning: "For an uncaught language exception, Apple documents this stack as the path to the throwing API; abort and pthread frames are only termination mechanics.",
+      referenceUrl: REFERENCE_URLS.languageException,
     });
 
     return {
@@ -709,6 +747,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       meaning: isSwiftTrap
         ? "Apple documents EXC_BREAKPOINT/SIGTRAP as a trace trap; Swift uses this pattern for unrecoverable runtime errors and assertions."
         : "Apple documents EXC_BREAKPOINT/SIGTRAP as a trace trap; lower-level frameworks use it when they hit an unrecoverable condition.",
+      referenceUrl: REFERENCE_URLS.breakpointTrap,
     });
 
     return {
@@ -729,6 +768,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
         label: "Exception Subtype",
         value: exception.subtype,
         meaning: subtypeMeaning,
+        referenceUrl: REFERENCE_URLS.memoryAccess,
       });
     }
     if (vmInfo) {
@@ -736,6 +776,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
         label: "VM Region Info",
         value: truncateMiddle(vmInfo.message, 300),
         meaning: "For memory access crashes, Apple documents VM Region Info as the address-space clue that shows whether the faulting address is unmapped or protected.",
+        referenceUrl: REFERENCE_URLS.memoryAccess,
       });
     }
     const stateSummary = threadStateSummary(crashedThread?.threadState);
@@ -744,6 +785,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
         label: "Thread State",
         value: stateSummary,
         meaning: "Apple documents thread state as CPU register data captured at termination; pc/lr/far/esr help distinguish data access from instruction fetch failures.",
+        referenceUrl: REFERENCE_URLS.fields,
       });
     }
 
@@ -761,6 +803,7 @@ function buildRootCauseGuide(report, exception, crashedThread, crashedFrames, la
       label: "Exception Message",
       value: exception.message || exception.subtype || mechanism,
       meaning: "EXC_GUARD means the process violated a guarded system resource; the namespace and reason code narrow which subsystem reported it.",
+      referenceUrl: REFERENCE_URLS.exceptionTypes,
     });
     return {
       headline: "Guarded resource violation",
@@ -907,6 +950,7 @@ function summarizeSymbolication(crashedFrames, lastExceptionFrames, usedImages) 
     advice: missingImageUuids.length
       ? "Find the matching dSYM or archived build for each listed image UUID, then re-symbolicate before relying on exact frame names."
       : "Checked crash and last-exception stacks already include symbol names.",
+    referenceUrl: REFERENCE_URLS.symbolication,
   };
 }
 
@@ -1021,6 +1065,14 @@ function diagnosticMeaning(source, category) {
   if (/Application Specific Information|libsystem_c/.test(source)) return "Application Specific Information records framework or process messages emitted immediately before termination.";
   if (category === "Abort / language exception") return "Diagnostic messages can identify the API or framework condition that caused the abort.";
   return "Additional diagnostic text is directly related to the exception type and can narrow the root-cause search.";
+}
+
+function diagnosticReferenceUrl(source, category) {
+  if (source === "VM Region Info" || category === "Memory access") return REFERENCE_URLS.memoryAccess;
+  if (source === "Exception Message") return REFERENCE_URLS.fields;
+  if (/Application Specific Information|OS Fault|Diagnostic|libsystem_c/.test(source)) return REFERENCE_URLS.commonCrashes;
+  if (category === "Abort / language exception") return REFERENCE_URLS.languageException;
+  return REFERENCE_URLS.fields;
 }
 
 function memorySubtypeMeaning(subtype = "") {

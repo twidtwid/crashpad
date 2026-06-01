@@ -108,11 +108,12 @@ test("classifies watchdog and OS terminations as collection-sensitive crash repo
   assert.equal(analysis.osTermination.kind, "watchdog");
   assert.match(analysis.osTermination.summary, /20 seconds/i);
   assert.match(analysis.rootCause.headline, /watchdog/i);
-  assert.ok(analysis.rootCause.signals.some((signal) => signal.label === "OS termination"));
+  assert.ok(analysis.rootCause.signals.some((signal) => signal.label === "OS termination" && /addressing-watchdog-terminations/.test(signal.referenceUrl)));
   assert.ok(analysis.recommendations.some((item) => /outside the debugger/i.test(item)));
   assert.equal(analysis.collectionContext.primarySource, "IPS crash report");
+  assert.ok(analysis.collectionContext.relatedSources.every((source) => /^https:\/\/developer\.apple\.com\//.test(source.url)));
   assert.ok(analysis.collectionContext.relatedSources.some((source) => /not always appear in Xcode Organizer/i.test(source.detail)));
-  assert.ok(analysis.crashStory.checks.some((check) => check.label === "Termination reason" && /watchdog/i.test(check.detail)));
+  assert.ok(analysis.crashStory.checks.some((check) => check.label === "Termination reason" && /watchdog/i.test(check.detail) && /addressing-watchdog-terminations/.test(check.referenceUrl)));
 });
 
 test("formats frame addresses from image base plus image offset using documented IPS mapping", () => {

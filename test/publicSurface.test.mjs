@@ -113,14 +113,21 @@ test("copy summary action is neutral until the user acts on it", async () => {
 });
 
 test("summary exposes crash story, collection context, and symbolication readiness", async () => {
-  const [app, messages] = await Promise.all([
+  const [app, parser, messages] = await Promise.all([
     readProjectFile("src/app.js"),
+    readProjectFile("src/crashParser.js"),
     readProjectFile("src/i18n/en.js"),
   ]);
 
   assert.match(app, /renderCrashStory/);
   assert.match(app, /renderCollectionContext/);
   assert.match(app, /renderSymbolicationReadiness/);
+  assert.match(app, /renderReferenceLink/);
+  assert.match(app, /target="_blank"/);
+  assert.match(app, /rel="noopener noreferrer"/);
+  assert.match(parser, /referenceUrl/);
+  assert.match(parser, /developer\.apple\.com\/documentation\/xcode\/acquiring-crash-reports-and-diagnostic-logs/);
+  assert.match(parser, /developer\.apple\.com\/documentation\/metrickit/);
   assert.match(messages, /crashStory: "Crash Story"/);
   assert.match(messages, /collectionContext: "Collection Context"/);
   assert.match(messages, /symbolicationReadiness: "Symbolication Readiness"/);
